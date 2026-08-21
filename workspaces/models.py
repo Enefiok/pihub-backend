@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
-from accounts.models import User
 
 class WorkspacePlan(models.Model):
     """
@@ -30,7 +29,6 @@ class WorkspacePlan(models.Model):
 class WorkspaceTag(models.Model):
     """
     Unique workspace tags as per Section 6.3
-    Tags are assigned to active bookings and prevent conflicts.
     """
     tag_code = models.CharField(max_length=20, unique=True)
     is_available = models.BooleanField(default=True)
@@ -50,6 +48,7 @@ class WorkspaceTag(models.Model):
 class Booking(models.Model):
     """
     Workspace booking model as per Section 6.2
+    Note: Customers do not have User accounts. Their details are stored directly here.
     """
     class Status(models.TextChoices):
         PENDING = 'PENDING', 'Pending Payment'
@@ -57,12 +56,8 @@ class Booking(models.Model):
         EXPIRED = 'EXPIRED', 'Expired'
         CANCELLED = 'CANCELLED', 'Cancelled'
     
-    customer = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='bookings',
-        limit_choices_to={'role': User.Role.CUSTOMER}
-    )
+    # REMOVED: customer = models.ForeignKey(User, ...)
+    
     workspace_plan = models.ForeignKey(
         WorkspacePlan, 
         on_delete=models.PROTECT,

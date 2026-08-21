@@ -27,8 +27,7 @@ class GalleryImage(models.Model):
 
 class Enquiry(models.Model):
     """
-    Contact enquiries for services without direct online payment 
-    (Conference Room, Private Spaces, Podcast).
+    Contact enquiries for services without direct online payment.
     """
     class ServiceInterest(models.TextChoices):
         CONFERENCE_ROOM = 'CONFERENCE_ROOM', 'Conference Room'
@@ -49,3 +48,18 @@ class Enquiry(models.Model):
 
     def __str__(self):
         return f"Enquiry from {self.name} - {self.service_interest}"
+
+
+class Subscriber(models.Model):
+    """
+    Newsletter subscribers.
+    """
+    email = models.EmailField(unique=True)
+    is_active = models.BooleanField(default=True)
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-subscribed_at']
+
+    def __str__(self):
+        return self.email

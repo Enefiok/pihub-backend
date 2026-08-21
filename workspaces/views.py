@@ -16,24 +16,29 @@ class WorkspacePlanViewSet(viewsets.ReadOnlyModelViewSet):
 
 class BookingViewSet(viewsets.ModelViewSet):
     """
-    Handles booking creation for customers, and viewing for staff.
+    Handles booking creation for guest customers (public), 
+    and viewing for authenticated staff.
     """
     serializer_class = BookingSerializer
 
-    def get_queryset(self):
-        user = self.request.user
-        # Customers can only see their own bookings
-        if user.role == user.Role.CUSTOMER:
-            return Booking.objects.filter(customer=user)
-        # Staff (Admin, Receptionist, CEO, Lead Dev) can see all bookings
-        return Booking.objects.all()
-
     def get_permissions(self):
-        # Only authenticated users can create or view bookings
-        if self.action in ['create', 'list', 'retrieve']:
-            return [permissions.IsAuthenticated()]
+        # Anyone can create a booking (guest checkout)
+        if self.action == 'create':
+            return [permissions.AllowAny()]
+        # Only authenticated staff can view/list bookings
         return [permissions.IsAuthenticated()]
 
+    def get_queryset(self):
+        user = self.request.user
+        # Staff (Admin, Receptionist, CEO, Lead Dev) can see all bookings
+        if user.is_authenticated and user.role in [
+            user.Role.ADMIN, 
+            user.Role.RECEPTIONIST, 
+            user.Role.CEO, 
+            user.Role.LEAD_DEVELOPER
+        ]:
+            return Booking.objects.all()
+        return Booking.objects.none()
+
     def perform_create(self, serializer):
-        # The serializer's create() method handles setting the customer and dates
         serializer.save()
