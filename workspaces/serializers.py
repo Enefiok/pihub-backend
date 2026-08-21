@@ -25,7 +25,8 @@ class BookingSerializer(serializers.ModelSerializer):
             'status', 'start_date', 'end_date', 'payment_verified',
             'customer_name', 'customer_email', 'customer_phone', 'created_at'
         ]
-        read_only_fields = ['id', 'status', 'payment_verified', 'created_at']
+        # Added 'end_date' to read_only so the frontend doesn't try to send it
+        read_only_fields = ['id', 'status', 'payment_verified', 'created_at', 'end_date']
 
     def validate_start_date(self, value):
         """Ensure start date is not in the past."""
@@ -37,8 +38,9 @@ class BookingSerializer(serializers.ModelSerializer):
         """
         Automatically calculate end_date based on the plan's duration.
         """
-        plan = validated_data['workspace_plan']
-        start_date = validated_data['start_date']
+        # .pop() removes the item from validated_data so it isn't passed twice to .create()
+        plan = validated_data.pop('workspace_plan')
+        start_date = validated_data.pop('start_date')
         
         # Calculate end date based on plan duration
         end_date = start_date + timedelta(days=plan.duration_days)
@@ -49,6 +51,6 @@ class BookingSerializer(serializers.ModelSerializer):
             status=Booking.Status.PENDING,
             start_date=start_date,
             end_date=end_date,
-            **validated_data
+            **validated_data  # Now this only contains name, email, phone, etc.
         )
         return booking

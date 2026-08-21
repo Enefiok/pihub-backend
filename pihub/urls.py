@@ -12,7 +12,8 @@ urlpatterns = [
     # API Routes
     path('api/accounts/', include('accounts.urls')),
     path('api/workspaces/', include('workspaces.urls')),
-    path('api/core/', include('core.urls')), # <--- Added this line
+    path('api/core/', include('core.urls')), 
+     path('api/courses/', include('courses.urls')), 
 ]
 
 # Serve media files (like course and blog images) during development
