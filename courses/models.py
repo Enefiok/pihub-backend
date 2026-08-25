@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 from accounts.models import User
 
 class Course(models.Model):
@@ -11,10 +12,18 @@ class Course(models.Model):
         COMING_SOON = 'COMING_SOON', 'Coming Soon'
 
     title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=200, unique=True, blank=True)
     description = models.TextField()
     duration = models.CharField(max_length=50, help_text="e.g., 4 weeks, 3 days")
-    requirements = models.TextField(blank=True)
+    
+    # UPDATED: Made strictly optional for the database and frontend
+    requirements = models.TextField(
+        blank=True, 
+        null=True, 
+        default='', 
+        help_text="Optional: Prerequisites or things needed for the course."
+    )
+    
     image = models.ImageField(upload_to='courses/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     
@@ -26,6 +35,12 @@ class Course(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        # Auto-generate slug from title if not provided
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
 
 
 class Enrollment(models.Model):
