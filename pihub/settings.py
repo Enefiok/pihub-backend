@@ -45,7 +45,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Added for production static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -75,11 +75,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pihub.wsgi.application'
 
 # Database
-# Automatically uses PostgreSQL on Render (via DATABASE_URL environment variable), 
-# and falls back to local SQLite for development.
+# Uses python-decouple to securely read DATABASE_URL from Environment Variables.
+# Falls back to local SQLite for development if DATABASE_URL is not set.
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        default=config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
         conn_max_age=600,
         ssl_require=True
     )
@@ -151,9 +151,9 @@ FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 # Email Configuration (Using SMTP)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com') # e.g., smtp.gmail.com or smtp.zoho.com
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='') # Your email address
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='') # Your email password or App Password
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@pihub.com')
