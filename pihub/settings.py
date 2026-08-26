@@ -129,3 +129,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Admin Registration Secret Key (Loaded securely from .env via decouple)
 ADMIN_REGISTRATION_SECRET = config('ADMIN_REGISTRATION_SECRET', default='')
+
+
+# Frontend URL (Used for generating unsubscribe links)
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+
+# Email Configuration (Using SMTP)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com') # e.g., smtp.gmail.com or smtp.zoho.com
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='') # Your email address
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='') # Your email password or App Password
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@pihub.com')

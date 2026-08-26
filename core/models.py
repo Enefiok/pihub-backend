@@ -1,65 +1,70 @@
+import uuid
 from django.db import models
+from django.core.mail import get_connection, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+from django.utils import timezone
 
-class GalleryImage(models.Model):
-    """
-    Dynamic images for frontend carousels, sliders, and galleries.
-    Managed entirely from the admin dashboard.
-    """
-    class Section(models.TextChoices):
-        HOME_HERO = 'HOME_HERO', 'Home Hero Slider'
-        ABOUT_US = 'ABOUT_US', 'About Us Gallery'
-        GENERAL = 'GENERAL', 'General Gallery'
-
-    title = models.CharField(max_length=100, blank=True)
-    image = models.ImageField(upload_to='gallery/')
-    section = models.CharField(max_length=20, choices=Section.choices, default=Section.GENERAL)
-    caption = models.CharField(max_length=255, blank=True)
-    display_order = models.PositiveIntegerField(default=0, help_text="Lower numbers appear first")
+class Subscriber(models.Model):
+    email = models.EmailField(unique=True)
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['section', 'display_order', '-created_at']
-
-    def __str__(self):
-        return self.title or f"Image {self.id}"
-
-
-class Enquiry(models.Model):
-    """
-    Contact enquiries for services without direct online payment.
-    """
-    class ServiceInterest(models.TextChoices):
-        CONFERENCE_ROOM = 'CONFERENCE_ROOM', 'Conference Room'
-        PRIVATE_SPACES = 'PRIVATE_SPACES', 'Private Spaces'
-        PODCAST = 'PODCAST', 'Podcast'
-        GENERAL = 'GENERAL', 'General Enquiry'
-
-    name = models.CharField(max_length=100)
-    email = models.EmailField()
-    phone = models.CharField(max_length=15, blank=True)
-    service_interest = models.CharField(max_length=20, choices=ServiceInterest.choices)
-    message = models.TextField()
-    is_read = models.BooleanField(default=False)
+    unsubscribe_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"Enquiry from {self.name} - {self.service_interest}"
+        return self.email
 
 
-class Subscriber(models.Model):
-    """
-    Newsletter subscribers.
-    """
-    email = models.EmailField(unique=True)
-    is_active = models.BooleanField(default=True)
-    subscribed_at = models.DateTimeField(auto_now_add=True)
+class Newsletter(models.Model):
+    subject = models.CharField(max_length=200)
+    content = models.TextField(help_text="Write your newsletter content here. You can use basic HTML.")
+    is_sent = models.BooleanField(default=False)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-subscribed_at']
+        ordering = ['-created_at']
 
     def __str__(self):
-        return self.email
+        return self.subject
+
+    def send(self):
+        """Sends the newsletter to all active subscribers."""
+        active_subscribers = Subscriber.objects.filter(is_active=True)
+        if not active_subscribers.exists():
+            return 0
+
+        connection = get_connection() # Opens a single connection for efficiency
+        connection.open()
+        
+        messages = []
+        for sub in active_subscribers:
+            context = {
+                'content': self.content,
+                'unsubscribe_link': f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/unsubscribe/{sub.unsubscribe_token}/"
+            }
+            
+            html_content = render_to_string('core/emails/newsletter.html', context)
+            text_content = strip_tags(html_content)
+            
+            msg = EmailMultiAlternatives(
+                subject=self.subject,
+                body=text_content,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[sub.email],
+                connection=connection
+            )
+            msg.attach_alternative(html_content, "text/html")
+            messages.append(msg)
+            
+        connection.send_messages(messages)
+        connection.close()
+        
+        self.is_sent = True
+        self.sent_at = timezone.now()
+        self.save()
+        return len(messages)
