@@ -23,9 +23,11 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'workspace_plan', 'plan_name', 'plan_price',
             'status', 'start_date', 'end_date', 'payment_verified',
-            'customer_name', 'customer_email', 'customer_phone', 'created_at'
+            'customer_name', 'customer_email', 'customer_phone', 
+            'reference', 'created_at'  # <-- ADDED 'reference' HERE
         ]
-        # Added 'end_date' to read_only so the frontend doesn't try to send it
+        # Notice 'reference' is NOT in read_only_fields. 
+        # This allows the frontend (or Postman) to send it during checkout.
         read_only_fields = ['id', 'status', 'payment_verified', 'created_at', 'end_date']
 
     def validate_start_date(self, value):
@@ -46,11 +48,13 @@ class BookingSerializer(serializers.ModelSerializer):
         end_date = start_date + timedelta(days=plan.duration_days)
         
         # Create the booking in PENDING status
+        # Because we added 'reference' to the fields list, it will automatically 
+        # be saved here if the frontend/Postman included it in the request!
         booking = Booking.objects.create(
             workspace_plan=plan,
             status=Booking.Status.PENDING,
             start_date=start_date,
             end_date=end_date,
-            **validated_data  # Now this only contains name, email, phone, etc.
+            **validated_data  
         )
         return booking

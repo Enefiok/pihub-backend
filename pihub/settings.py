@@ -75,13 +75,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pihub.wsgi.application'
 
 # Database
-# Uses python-decouple to securely read DATABASE_URL from Environment Variables.
-# Falls back to local SQLite for development if DATABASE_URL is not set.
+# Uses dj_database_url to parse the DATABASE_URL environment variable.
+# In production (Render), set DATABASE_URL in your Render Environment Variables.
+# In local development, if DATABASE_URL is not set in .env, it safely falls back to local SQLite.
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
         conn_max_age=600,
-        ssl_require=True
     )
 }
 
@@ -148,12 +148,15 @@ ADMIN_REGISTRATION_SECRET = config('ADMIN_REGISTRATION_SECRET', default='')
 # Frontend URL (Used for generating unsubscribe links)
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
-# Email Configuration (Using SMTP)
+# Email Configuration
+# Currently set to console for local testing (prints beautiful HTML to terminal).
+# When ready for real Zoho SMTP, comment out the console line and uncomment the SMTP line.
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-#EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.zoho.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@pihub.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PIHUB <noreply@pihub.com>')

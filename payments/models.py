@@ -24,10 +24,16 @@ class Payment(models.Model):
         blank=True, 
         related_name='payments'
     )
+    
+    # CRITICAL FIX: Made customer optional since we use Guest Checkout.
+    # Guests do not have User accounts, so this will be null for online bookings.
     customer = models.ForeignKey(
         User, 
-        on_delete=models.CASCADE, 
-        related_name='payments'
+        on_delete=models.SET_NULL,  # Changed from CASCADE to SET_NULL
+        null=True,                  # Added null=True
+        blank=True,                 # Added blank=True
+        related_name='payments',
+        help_text="Optional: Linked to a registered user if applicable. Guest bookings will leave this blank."
     )
     
     amount = models.DecimalField(max_digits=10, decimal_places=2)

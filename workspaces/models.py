@@ -32,7 +32,11 @@ class WorkspaceTag(models.Model):
     """
     tag_code = models.CharField(max_length=20, unique=True)
     is_available = models.BooleanField(default=True)
-    current_booking = models.ForeignKey(
+    
+    # CRITICAL FIX: Changed to OneToOneField. 
+    # A tag can only belong to ONE active booking at a time.
+    # This makes `booking.assigned_tag` return the actual Tag object directly.
+    current_booking = models.OneToOneField(
         'Booking', 
         on_delete=models.SET_NULL, 
         null=True, 
@@ -56,8 +60,6 @@ class Booking(models.Model):
         EXPIRED = 'EXPIRED', 'Expired'
         CANCELLED = 'CANCELLED', 'Cancelled'
     
-    # REMOVED: customer = models.ForeignKey(User, ...)
-    
     workspace_plan = models.ForeignKey(
         WorkspacePlan, 
         on_delete=models.PROTECT,
@@ -73,6 +75,15 @@ class Booking(models.Model):
     payment_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # CRITICAL ADDITION: The unique reference ID from Paystack/Flutterwave
+    reference = models.CharField(
+        max_length=100, 
+        unique=True, 
+        blank=True, 
+        null=True, 
+        help_text="Payment gateway transaction reference ID"
+    )
     
     # Customer details (stored at time of booking)
     customer_name = models.CharField(max_length=100)
@@ -90,7 +101,7 @@ class Booking(models.Model):
         return f"Booking {self.id} - {self.customer_name} ({self.status})"
     
     def activate(self):
-        """Activate booking and assign a tag"""
+        """Activate booking and assign a tag securely"""
         from django.db import transaction
         
         with transaction.atomic():
@@ -98,7 +109,7 @@ class Booking(models.Model):
             self.payment_verified = True
             self.save()
             
-            # Assign an available tag
+            # Securely lock and assign an available tag to prevent race conditions
             available_tag = WorkspaceTag.objects.filter(
                 is_available=True
             ).select_for_update().first()
@@ -107,9 +118,11 @@ class Booking(models.Model):
                 available_tag.is_available = False
                 available_tag.current_booking = self
                 available_tag.save()
+                return True
+            return False
     
     def expire(self):
-        """Expire booking and release tag"""
+        """Expire booking and release tag back to the pool"""
         from django.db import transaction
         
         with transaction.atomic():
@@ -117,7 +130,8 @@ class Booking(models.Model):
             self.save()
             
             # Release the tag back to pool
-            if hasattr(self, 'assigned_tag'):
+            # Because we used OneToOneField, self.assigned_tag is the actual Tag object
+            if hasattr(self, 'assigned_tag') and self.assigned_tag:
                 tag = self.assigned_tag
                 tag.is_available = True
                 tag.current_booking = None
