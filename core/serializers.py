@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Subscriber, Newsletter
+from .models import Subscriber, Newsletter, GalleryImage, Enquiry
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -42,5 +42,18 @@ class NewsletterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Newsletter
         fields = ['id', 'subject', 'content', 'is_sent', 'sent_at', 'created_at']
-        # These fields are read-only because they are handled automatically by the backend
         read_only_fields = ['id', 'is_sent', 'sent_at', 'created_at']
+
+
+class GalleryImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GalleryImage
+        fields = ['id', 'title', 'image', 'category', 'display_order', 'is_active', 'created_at']
+
+
+class EnquirySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Enquiry
+        fields = ['id', 'name', 'email', 'phone', 'service_type', 'subject', 'message', 'status', 'created_at']
+        # Public users can only provide basic info. Status is read-only and defaults to 'NEW'.
+        read_only_fields = ['id', 'status', 'created_at']

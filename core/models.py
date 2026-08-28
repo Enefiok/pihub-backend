@@ -68,3 +68,56 @@ class Newsletter(models.Model):
         self.sent_at = timezone.now()
         self.save()
         return len(messages)
+
+
+class GalleryImage(models.Model):
+    """Dynamic images for frontend carousels and galleries."""
+    CATEGORY_CHOICES = [
+        ('HOME_CAROUSEL', 'Home Carousel'),
+        ('WORKSPACE', 'Workspace'),
+        ('PODCAST', 'Podcast Studio'),
+        ('EVENTS', 'Events'),
+    ]
+    
+    title = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='gallery/%Y/%m/')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='HOME_CAROUSEL')
+    display_order = models.PositiveIntegerField(default=0, help_text="Lower numbers display first")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['display_order', '-created_at']
+        
+    def __str__(self):
+        return self.title
+
+
+class Enquiry(models.Model):
+    """Contact enquiries for non-payment services."""
+    SERVICE_CHOICES = [
+        ('CONFERENCE_ROOM', 'Conference Room'),
+        ('PRIVATE_SPACE', 'Private Space'),
+        ('PODCAST', 'Podcast Studio'),
+        ('GENERAL', 'General Enquiry'),
+    ]
+    STATUS_CHOICES = [
+        ('NEW', 'New'),
+        ('IN_PROGRESS', 'In Progress'),
+        ('RESOLVED', 'Resolved'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+    service_type = models.CharField(max_length=20, choices=SERVICE_CHOICES)
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='NEW')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"Enquiry from {self.name} - {self.service_type}"

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
-from .models import Subscriber, Newsletter
+from .models import Subscriber, Newsletter, GalleryImage, Enquiry
 
 @admin.register(Subscriber)
 class SubscriberAdmin(admin.ModelAdmin):
@@ -36,3 +36,17 @@ class NewsletterAdmin(admin.ModelAdmin):
         
         if count == 0:
             self.message_user(request, "No unsent newsletters were selected.", level='WARNING')
+
+
+@admin.register(GalleryImage)
+class GalleryImageAdmin(admin.ModelAdmin):
+    list_display = ('title', 'category', 'display_order', 'is_active', 'created_at')
+    list_filter = ('category', 'is_active')
+    list_editable = ('display_order', 'is_active')
+
+
+@admin.register(Enquiry)
+class EnquiryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'service_type', 'status', 'created_at')
+    list_filter = ('service_type', 'status')
+    search_fields = ('name', 'email', 'subject', 'message')
