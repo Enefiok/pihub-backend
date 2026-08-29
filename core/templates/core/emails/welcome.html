@@ -1,42 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 20px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { text-align: center; padding-bottom: 20px; border-bottom: 2px solid #FF6B35; }
-        .header h1 { color: #FF6B35; margin: 0; }
-        .content { padding: 20px 0; }
-        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #777; text-align: center; }
-        .footer a { color: #FF6B35; text-decoration: none; }
-        .btn { display: inline-block; padding: 12px 24px; background-color: #FF6B35; color: #fff !important; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome to PIHUB</title>
+<style>
+  body, table, td { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; background-color: #f2f2f2; font-family: Arial, Helvetica, sans-serif; }
+
+  a.social-icon:hover { background-color: #FF5A1F !important; }
+  a.social-icon:hover svg path,
+  a.social-icon:hover svg rect,
+  a.social-icon:hover svg circle { fill: #ffffff !important; stroke: #ffffff !important; }
+
+  a.cta-btn:hover { background-color: #E04E18 !important; }
+
+  @media only screen and (max-width: 600px) {
+    .email-container { width: 100% !important; }
+    .fluid-padding { padding-left: 20px !important; padding-right: 20px !important; }
+  }
+</style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎉 Welcome to PIHUB!</h1>
-        </div>
-        <div class="content">
-            <p>Hi there,</p>
-            <p>Thank you for subscribing to the PIHUB newsletter. You will now receive the latest updates on:</p>
-            <ul>
-                <li>🏢 New workspace plans and availability</li>
-                <li>📚 Exciting courses and training programs</li>
-                <li>🎁 Exclusive offers and early-bird discounts</li>
-                <li>🚀 Tech community events and workshops</li>
-            </ul>
-            <p>We're excited to have you on board and can't wait to share what's coming next!</p>
-            <br>
-            <p>Best regards,<br><strong>The PIHUB Team</strong></p>
-        </div>
-        <div class="footer">
-            <p>You are receiving this email because you subscribed to the PIHUB newsletter.</p>
-            <p><a href="{{ unsubscribe_link }}">Click here to unsubscribe</a></p>
-            <p>&copy; 2026 PIHUB. All rights reserved.</p>
-        </div>
-    </div>
+<body style="margin:0; padding:0; background-color:#f2f2f2;">
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f2f2;">
+    <tr>
+      <td align="center" style="padding: 32px 16px;">
+
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background-color:#ffffff; border-radius:10px; overflow:hidden;">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:#141414; padding:30px 24px;">
+              <span style="font-family: Arial, Helvetica, sans-serif; font-weight:700; font-size:24px; letter-spacing:1px; color:#ffffff;">
+                PI<span style="color:#FF5A1F;">HUB</span>
+              </span>
+            </td>
+          </tr>
+
+          <!-- Accent line -->
+          <tr>
+            <td style="height:3px; background-color:#FF5A1F; font-size:0; line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td class="fluid-padding" style="padding:40px; color:#333333;">
+
+              <h1 style="margin:0 0 4px; font-family: Arial, Helvetica, sans-serif; font-size:22px; font-weight:700; color:#1a1a1a;">
+                Welcome to PIHUB
+              </h1>
+              <div style="width:48px; height:3px; background-color:#FF5A1F; margin:0 0 22px;"></div>
+
+              <p style="margin:0 0 16px; font-size:15px; line-height:1.65; color:#444444;">
+                Hi there,
+              </p>
+              <p style="margin:0 0 20px; font-size:15px; line-height:1.65; color:#444444;">
+                Thank you for subscribing to the PIHUB newsletter. You'll now be the first to hear about:
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin:0 0 24px;">
+                <tr>
+                  <td style="padding:0 0 12px; vertical-align:top; width:16px;">
+                    <div style="width:6px; height:6px; margin-top:8px; background-color:#FF5A1F;"></div>
+                  </td>
+                  <td style="padding:0 0 12px; font-size:14.5px; line-height:1.6; color:#444444;">
+                    New workspace plans and availability
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 12px; vertical-align:top; width:16px;">
+                    <div style="width:6px; height:6px; margin-top:8px; background-color:#FF5A1F;"></div>
+                  </td>
+                  <td style="padding:0 0 12px; font-size:14.5px; line-height:1.6; color:#444444;">
+                    Courses and hands-on training programs
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 12px; vertical-align:top; width:16px;">
+                    <div style="width:6px; height:6px; margin-top:8px; background-color:#FF5A1F;"></div>
+                  </td>
+                  <td style="padding:0 0 12px; font-size:14.5px; line-height:1.6; color:#444444;">
+                    Exclusive offers and early-bird discounts
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0; vertical-align:top; width:16px;">
+                    <div style="width:6px; height:6px; margin-top:8px; background-color:#FF5A1F;"></div>
+                  </td>
+                  <td style="padding:0; font-size:14.5px; line-height:1.6; color:#444444;">
+                    Tech community events and workshops
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 28px; font-size:15px; line-height:1.65; color:#444444;">
+                We're glad to have you on board and can't wait to share what's coming next.
+              </p>
+
+              <!-- CTA -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 30px;">
+                <tr>
+                  <td style="border-radius:6px; background-color:#FF5A1F;">
+                    <a href="https://pihubng.com" class="cta-btn" style="display:inline-block; padding:13px 28px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:6px;">
+                      Visit PIHUB
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0; font-size:15px; line-height:1.65; color:#444444;">
+                Best regards,<br>
+                <strong style="color:#1a1a1a;">The PIHUB Team</strong>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="border-top:1px solid #eeeeee;"></div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color:#fafafa; padding:28px 40px 32px;">
+
+              <!-- Social icons -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto 18px;">
+                <tr>
+                  <td style="padding: 0 6px;">
+                    <a href="https://www.facebook.com/profile.php?id=61593336062853" class="social-icon" style="display:inline-block; width:32px; height:32px; line-height:32px; border-radius:50%; background-color:#eeeeee; text-align:center;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06C2 17.08 5.66 21.23 10.44 22V14.96H7.9V12.06H10.44V9.84C10.44 7.32 11.93 5.93 14.22 5.93C15.31 5.93 16.45 6.13 16.45 6.13V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V22C18.34 21.23 22 17.08 22 12.06Z" fill="#777777"/></svg>
+                    </a>
+                  </td>
+                  <td style="padding: 0 6px;">
+                    <a href="https://www.instagram.com/prestigeinnovationhub" class="social-icon" style="display:inline-block; width:32px; height:32px; line-height:32px; border-radius:50%; background-color:#eeeeee; text-align:center;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle;"><rect x="2" y="2" width="20" height="20" rx="5.5" stroke="#777777" stroke-width="1.8" fill="none"/><circle cx="12" cy="12" r="4.4" stroke="#777777" stroke-width="1.8" fill="none"/><circle cx="17.4" cy="6.6" r="1.15" fill="#777777"/></svg>
+                    </a>
+                  </td>
+                  <td style="padding: 0 6px;">
+                    <a href="https://www.tiktok.com/@prestige.innovati7" class="social-icon" style="display:inline-block; width:32px; height:32px; line-height:32px; border-radius:50%; background-color:#eeeeee; text-align:center;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle;"><path d="M16.5 2H13.6V15.4C13.6 16.83 12.44 18 11 18C9.56 18 8.4 16.83 8.4 15.4C8.4 13.98 9.56 12.8 11 12.8C11.28 12.8 11.55 12.85 11.8 12.93V9.98C11.53 9.94 11.27 9.92 11 9.92C7.92 9.92 5.42 12.36 5.42 15.4C5.42 18.44 7.92 20.9 11 20.9C14.08 20.9 16.58 18.44 16.58 15.4V8.53C17.62 9.28 18.9 9.72 20.28 9.72V6.85C18.19 6.85 16.5 5.19 16.5 3.14V2Z" fill="#777777"/></svg>
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 6px; font-size:12px; color:#999999; line-height:1.6;">
+                You're receiving this email because you subscribed to the PIHUB newsletter.
+              </p>
+              <p style="margin:0 0 6px; font-size:12px;">
+                <a href="{{ unsubscribe_link }}" style="color:#FF5A1F; text-decoration:none;">Click here to unsubscribe</a>
+              </p>
+              <p style="margin:0; font-size:12px; color:#bbbbbb;">
+                &copy; 2026 PIHUB. All rights reserved.
+              </p>
+
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>
