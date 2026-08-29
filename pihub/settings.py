@@ -150,18 +150,19 @@ ADMIN_REGISTRATION_SECRET = config('ADMIN_REGISTRATION_SECRET', default='')
 # Frontend URL (Used for generating unsubscribe links)
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
 
-# Email Configuration
-# Currently set to console for local testing (prints beautiful HTML to terminal).
-# When ready for real Zoho SMTP, comment out the console line and uncomment the SMTP line.
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# ==========================================
+# Email Configuration (Hostinger SMTP)
+# ==========================================
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.zoho.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.hostinger.com')
+EMAIL_PORT = config('EMAIL_PORT', default=465, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='noreply@pihubng.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PIHUB <noreply@pihub.com>')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PIHUB <noreply@pihubng.com>')
 
 # ==========================================
 # CORS Configuration (Allows frontend to communicate with backend)
