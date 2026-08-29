@@ -163,6 +163,7 @@ EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='noreply@pihubng.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='PIHUB <noreply@pihubng.com>')
+EMAIL_TIMEOUT = 5 
 
 # ==========================================
 # CORS Configuration (Allows frontend to communicate with backend)
