@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from django.utils import timezone
 from accounts.models import User  # Imported to check user roles
 from .models import WorkspacePlan, WorkspaceTag, Booking
-from .serializers import WorkspacePlanSerializer, BookingSerializer
+from .serializers import WorkspacePlanSerializer, BookingSerializer, WorkspaceTagSerializer
 
 
 class WorkspacePlanViewSet(viewsets.ModelViewSet):
@@ -40,7 +40,8 @@ class WorkspacePlanViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     """
     Handles booking creation for guest customers (public), 
-    and viewing for authenticated staff.
+    viewing for authenticated staff, and walk-in bookings for
+    customers who pay in person at the front desk.
     """
     serializer_class = BookingSerializer
 
@@ -48,7 +49,10 @@ class BookingViewSet(viewsets.ModelViewSet):
         # Anyone can create a booking (guest checkout)
         if self.action == 'create':
             return [permissions.AllowAny()]
-        # Only authenticated staff can view/list bookings
+        # Walk-in bookings are staff-only (admin/receptionist entering it manually)
+        if self.action == 'walk_in':
+            return [permissions.IsAuthenticated()]
+        # Only authenticated staff can view/list/update bookings
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
@@ -65,3 +69,62 @@ class BookingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+
+    @action(detail=False, methods=['post'])
+    def walk_in(self, request):
+        """
+        Staff-only: create a booking for a customer who paid in person
+        at the front desk, and immediately activate it — assigning an
+        available tag right away so staff can hand it over on the spot.
+
+        Only customer_name and workspace_plan are truly required. Email
+        is auto-filled with a placeholder if the customer didn't give one
+        (the model requires an email, but walk-in customers often won't
+        give one, especially for quick daily visits).
+        """
+        data = request.data.copy()
+
+        # Auto-generate a placeholder email if none provided
+        if not data.get('customer_email'):
+            data['customer_email'] = f"walkin+{int(timezone.now().timestamp())}@pihub.local"
+
+        # Default start_date to right now if admin didn't set one
+        if not data.get('start_date'):
+            data['start_date'] = timezone.now().isoformat()
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        booking = serializer.save()  # status defaults to PENDING inside serializer.create()
+
+        tag_assigned = booking.activate()
+
+        # Record this as a manual/in-person payment for the accounting trail
+        try:
+            from payments.models import Payment
+            Payment.objects.create(
+                booking=booking,
+                amount=booking.workspace_plan.price,
+                gateway=Payment.Gateway.MANUAL,
+                status=Payment.Status.SUCCESS,
+                transaction_id=f"MANUAL-{booking.id}-{int(timezone.now().timestamp())}",
+            )
+        except Exception:
+            pass  # Don't block the booking if the Payment record fails for any reason
+
+        booking.refresh_from_db()
+        response_serializer = BookingSerializer(booking)
+
+        return Response({
+            "message": "Walk-in booking created and tag assigned." if tag_assigned else "Booking created, but no tags are currently available.",
+            "booking": response_serializer.data,
+            "tag_assigned": tag_assigned,
+        }, status=status.HTTP_201_CREATED)
+
+
+class WorkspaceTagViewSet(viewsets.ModelViewSet):
+    """
+    Staff-only endpoint to view and manage workspace tags.
+    """
+    serializer_class = WorkspaceTagSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = WorkspaceTag.objects.all()

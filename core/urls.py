@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     SubscribeView, UnsubscribeView, NewsletterViewSet,
     PublicGalleryListView, PublicEnquiryCreateView,
-    StaffGalleryViewSet, StaffEnquiryViewSet
+    StaffGalleryViewSet, StaffEnquiryViewSet, StaffSubscriberViewSet
 )
 
 # Create a router and register our viewsets
@@ -11,6 +11,7 @@ router = DefaultRouter()
 router.register(r'newsletters', NewsletterViewSet, basename='newsletter')
 router.register(r'staff/gallery', StaffGalleryViewSet, basename='staff-gallery')
 router.register(r'staff/enquiries', StaffEnquiryViewSet, basename='staff-enquiry')
+router.register(r'staff/subscribers', StaffSubscriberViewSet, basename='staff-subscriber')
 
 urlpatterns = [
     # Public endpoints

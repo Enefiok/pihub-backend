@@ -17,6 +17,7 @@ class BookingSerializer(serializers.ModelSerializer):
     """
     plan_name = serializers.CharField(source='workspace_plan.name', read_only=True)
     plan_price = serializers.DecimalField(source='workspace_plan.price', max_digits=10, decimal_places=2, read_only=True)
+    tag_code = serializers.CharField(source='assigned_tag.tag_code', read_only=True, default=None)
 
     class Meta:
         model = Booking
@@ -24,15 +25,17 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'workspace_plan', 'plan_name', 'plan_price',
             'status', 'start_date', 'end_date', 'payment_verified',
             'customer_name', 'customer_email', 'customer_phone', 
-            'reference', 'created_at'  # <-- ADDED 'reference' HERE
+            'reference', 'tag_code', 'created_at'  # <-- ADDED 'reference' and 'tag_code' HERE
         ]
         # Notice 'reference' is NOT in read_only_fields. 
         # This allows the frontend (or Postman) to send it during checkout.
         read_only_fields = ['id', 'status', 'payment_verified', 'created_at', 'end_date']
 
     def validate_start_date(self, value):
-        """Ensure start date is not in the past."""
-        if value < timezone.now():
+        """Ensure start date is not in the past (small buffer to tolerate
+        millisecond timing gaps for auto-generated 'now' timestamps, e.g.
+        from walk-in bookings)."""
+        if value < timezone.now() - timedelta(minutes=1):
             raise serializers.ValidationError("Start date cannot be in the past.")
         return value
 
@@ -58,3 +61,18 @@ class BookingSerializer(serializers.ModelSerializer):
             **validated_data  
         )
         return booking
+
+
+class WorkspaceTagSerializer(serializers.ModelSerializer):
+    """
+    Serializer for staff to view and manage workspace tags.
+    Includes the customer name of whoever currently holds the tag, if any.
+    """
+    booking_customer_name = serializers.CharField(
+        source='current_booking.customer_name', read_only=True, default=None
+    )
+
+    class Meta:
+        model = WorkspaceTag
+        fields = ['id', 'tag_code', 'is_available', 'current_booking', 'booking_customer_name', 'created_at']
+        read_only_fields = ['id', 'current_booking', 'created_at']

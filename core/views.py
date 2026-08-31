@@ -2,7 +2,10 @@ from rest_framework import generics, status, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Subscriber, Newsletter, GalleryImage, Enquiry
-from .serializers import SubscribeSerializer, NewsletterSerializer, GalleryImageSerializer, EnquirySerializer
+from .serializers import (
+    SubscribeSerializer, SubscriberSerializer, NewsletterSerializer,
+    GalleryImageSerializer, EnquirySerializer
+)
 
 # --- PUBLIC ENDPOINTS ---
 
@@ -66,6 +69,12 @@ class NewsletterViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Failed to send newsletter: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class StaffSubscriberViewSet(viewsets.ModelViewSet):
+    """Staff-only endpoint to view/manage newsletter subscribers."""
+    queryset = Subscriber.objects.all()
+    serializer_class = SubscriberSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 class StaffGalleryViewSet(viewsets.ModelViewSet):
     """Full CRUD for Gallery Images. Staff only."""

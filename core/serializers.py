@@ -48,6 +48,14 @@ class SubscribeSerializer(serializers.ModelSerializer):
         return subscriber
 
 
+class SubscriberSerializer(serializers.ModelSerializer):
+    """Serializer for staff to view/manage newsletter subscribers."""
+    class Meta:
+        model = Subscriber
+        fields = ['id', 'email', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
 class NewsletterSerializer(serializers.ModelSerializer):
     """Serializer for staff to create and manage newsletters."""
     class Meta:
