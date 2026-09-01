@@ -1,17 +1,18 @@
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
+from accounts.permissions import IsManagementOrReadOnly
 from .models import Certificate
 from .serializers import CertificateSerializer
 
 class CertificateListCreateView(generics.ListCreateAPIView):
     """
     API endpoint for staff to list and create certificates.
-    - GET: List all certificates (staff only)
-    - POST: Create/issue a new certificate (staff only)
+    - GET: All staff can view (list) certificates.
+    - POST: Only CEO/Lead Dev/Admin can issue a new certificate.
     """
     queryset = Certificate.objects.all()
     serializer_class = CertificateSerializer
-    permission_classes = [permissions.IsAuthenticated]  # Only staff can access
+    permission_classes = [IsManagementOrReadOnly]
 
     def perform_create(self, serializer):
         # Automatically set the issued_by field to the current logged-in staff
@@ -21,10 +22,12 @@ class CertificateListCreateView(generics.ListCreateAPIView):
 class CertificateDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     API endpoint for staff to view, update, or delete a specific certificate.
+    - GET: All staff can view.
+    - PUT/PATCH/DELETE: Only CEO/Lead Dev/Admin.
     """
     queryset = Certificate.objects.all()
     serializer_class = CertificateSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsManagementOrReadOnly]
     lookup_field = 'certificate_id'
 
 

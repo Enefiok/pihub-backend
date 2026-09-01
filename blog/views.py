@@ -1,5 +1,6 @@
 from rest_framework import generics, viewsets, permissions, status
 from rest_framework.response import Response
+from accounts.permissions import IsMarketerOrManagement
 from .models import BlogPost, BlogCategory
 from .serializers import BlogPostSerializer, BlogCategorySerializer
 
@@ -26,18 +27,22 @@ class PublicBlogPostDetailView(generics.RetrieveAPIView):
 # --- STAFF ENDPOINTS (For Custom Admin Dashboard) ---
 
 class StaffBlogCategoryViewSet(viewsets.ModelViewSet):
-    """Full CRUD for Blog Categories. Staff only."""
+    """
+    Full CRUD for Blog Categories. Staff only.
+    All staff can view; CEO/Lead Dev/Admin/Marketer can create, update, delete.
+    """
     queryset = BlogCategory.objects.all()
     serializer_class = BlogCategorySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsMarketerOrManagement]
 
 class StaffBlogPostViewSet(viewsets.ModelViewSet):
     """
     Full CRUD for Blog Posts. Staff only.
-    Allows filtering by status (e.g., ?status=DRAFT) in the dashboard.
+    All staff can view (with optional ?status= filtering); CEO/Lead Dev/Admin/Marketer
+    can create, update, delete.
     """
     serializer_class = BlogPostSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsMarketerOrManagement]
 
     def get_queryset(self):
         # Staff can see ALL posts (Drafts and Published)

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
 from accounts.models import User  # Imported to check user roles
+from accounts.permissions import IsManagementOrReadOnly, IsManagementOrReceptionistCreateOnly
 from .models import WorkspacePlan, WorkspaceTag, Booking
 from .serializers import WorkspacePlanSerializer, BookingSerializer, WorkspaceTagSerializer
 
@@ -11,7 +12,7 @@ class WorkspacePlanViewSet(viewsets.ModelViewSet):
     """
     API endpoint for workspace plans.
     - Public: Can view active plans (Read-only)
-    - Staff: Can create, update, delete plans (Full CRUD)
+    - Staff: All can view; only CEO/Lead Dev/Admin can create, update, delete.
     """
     serializer_class = WorkspacePlanSerializer
 
@@ -19,8 +20,8 @@ class WorkspacePlanViewSet(viewsets.ModelViewSet):
         # Public can only view (GET requests)
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        # Staff must be authenticated to create/update/delete
-        return [permissions.IsAuthenticated()]
+        # Staff writes are restricted to management roles
+        return [IsManagementOrReadOnly()]
 
     def get_queryset(self):
         user = self.request.user
@@ -42,6 +43,8 @@ class BookingViewSet(viewsets.ModelViewSet):
     Handles booking creation for guest customers (public), 
     viewing for authenticated staff, and walk-in bookings for
     customers who pay in person at the front desk.
+    - Staff: All can view; CEO/Lead Dev/Admin can edit/delete;
+      Receptionist can additionally create walk-ins.
     """
     serializer_class = BookingSerializer
 
@@ -49,11 +52,12 @@ class BookingViewSet(viewsets.ModelViewSet):
         # Anyone can create a booking (guest checkout)
         if self.action == 'create':
             return [permissions.AllowAny()]
-        # Walk-in bookings are staff-only (admin/receptionist entering it manually)
+        # Walk-in bookings: management + Receptionist only
         if self.action == 'walk_in':
-            return [permissions.IsAuthenticated()]
-        # Only authenticated staff can view/list/update bookings
-        return [permissions.IsAuthenticated()]
+            return [IsManagementOrReceptionistCreateOnly()]
+        # List/retrieve/update/delete: management + Receptionist can view,
+        # but only management can edit/delete (enforced by the permission class)
+        return [IsManagementOrReceptionistCreateOnly()]
 
     def get_queryset(self):
         user = self.request.user
@@ -124,7 +128,8 @@ class BookingViewSet(viewsets.ModelViewSet):
 class WorkspaceTagViewSet(viewsets.ModelViewSet):
     """
     Staff-only endpoint to view and manage workspace tags.
+    All staff can view; only CEO/Lead Dev/Admin can create, update, delete.
     """
     serializer_class = WorkspaceTagSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsManagementOrReadOnly]
     queryset = WorkspaceTag.objects.all()

@@ -58,6 +58,17 @@ class StaffCreateSerializer(serializers.ModelSerializer):
         return user
 
 
+class StaffListSerializer(serializers.ModelSerializer):
+    """
+    Read-only serializer for CEO/Lead Dev to view all existing staff
+    accounts. Never exposes the password field.
+    """
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'role', 'phone_number', 'is_active', 'date_joined']
+        read_only_fields = fields
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     """
     Serializer for a logged-in user to change their own password.
@@ -85,3 +96,27 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save()
         return user
+
+
+class AdminResetPasswordSerializer(serializers.Serializer):
+    """
+    Lets a CEO/Lead Dev forcibly set a new password on another staff
+    member's account (e.g. when they forget it and can't self-service).
+    Requires the ADMIN's own current password as a confirmation step,
+    not the target user's — proves it's really the CEO/Lead Dev acting,
+    not just an unlocked session being misused.
+    """
+    admin_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    def validate_admin_password(self, value):
+        requesting_user = self.context['request'].user
+        if not requesting_user.check_password(value):
+            raise serializers.ValidationError("Your password is incorrect.")
+        return value
+
+    def save(self, **kwargs):
+        target_user = self.context['target_user']
+        target_user.set_password(self.validated_data['new_password'])
+        target_user.save()
+        return target_user

@@ -1,13 +1,14 @@
 from rest_framework import viewsets, permissions
 from accounts.models import User
-from .models import Course
-from .serializers import CourseSerializer
+from accounts.permissions import IsManagementOrReadOnly
+from .models import Course, Student
+from .serializers import CourseSerializer, StudentSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
     """
     API endpoint for courses.
     - Public: Can view active and coming-soon courses.
-    - Staff: Can create, update, delete, and view all courses (including unavailable).
+    - Staff: Can view all courses; only CEO/Lead Dev/Admin can create, update, delete.
     """
     serializer_class = CourseSerializer
 
@@ -15,8 +16,8 @@ class CourseViewSet(viewsets.ModelViewSet):
         # Public can only view (GET requests)
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        # Staff must be authenticated to create/update/delete
-        return [permissions.IsAuthenticated()]
+        # Staff must be authenticated AND management-level to create/update/delete
+        return [IsManagementOrReadOnly()]
 
     def get_queryset(self):
         user = self.request.user
@@ -35,3 +36,14 @@ class CourseViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated or self.request.user.role == User.Role.CUSTOMER:
             raise permissions.PermissionDenied("Only staff can create courses.")
         serializer.save()
+
+
+class StudentViewSet(viewsets.ModelViewSet):
+    """
+    Staff-only endpoint to track students actively studying at PIHUB.
+    Independent of Certificate (completion) and User (no login accounts).
+    All staff can view; only CEO/Lead Dev/Admin can create, update, delete.
+    """
+    serializer_class = StudentSerializer
+    permission_classes = [IsManagementOrReadOnly]
+    queryset = Student.objects.all()

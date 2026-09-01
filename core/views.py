@@ -1,6 +1,7 @@
 from rest_framework import generics, status, permissions, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from accounts.permissions import IsManagementOrReadOnly, IsMarketerOrManagement
 from .models import Subscriber, Newsletter, GalleryImage, Enquiry
 from .serializers import (
     SubscribeSerializer, SubscriberSerializer, NewsletterSerializer,
@@ -50,10 +51,13 @@ class PublicEnquiryCreateView(generics.CreateAPIView):
 # --- STAFF ENDPOINTS (For Custom Admin Dashboard) ---
 
 class NewsletterViewSet(viewsets.ModelViewSet):
-    """API endpoint for staff to manage newsletters (CRUD)."""
+    """
+    API endpoint for staff to manage newsletters (CRUD).
+    All staff can view; only CEO/Lead Dev/Admin can create, edit, delete, or send.
+    """
     queryset = Newsletter.objects.all()
     serializer_class = NewsletterSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsManagementOrReadOnly]
 
     @action(detail=True, methods=['post'])
     def send(self, request, pk=None):
@@ -71,22 +75,31 @@ class NewsletterViewSet(viewsets.ModelViewSet):
             return Response({"error": f"Failed to send newsletter: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class StaffSubscriberViewSet(viewsets.ModelViewSet):
-    """Staff-only endpoint to view/manage newsletter subscribers."""
+    """
+    Staff-only endpoint to view/manage newsletter subscribers.
+    All staff can view; only CEO/Lead Dev/Admin can create, edit, delete.
+    """
     queryset = Subscriber.objects.all()
     serializer_class = SubscriberSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsManagementOrReadOnly]
 
 class StaffGalleryViewSet(viewsets.ModelViewSet):
-    """Full CRUD for Gallery Images. Staff only."""
+    """
+    Full CRUD for Gallery Images. Staff only.
+    All staff can view; CEO/Lead Dev/Admin/Marketer can create, edit, delete.
+    """
     queryset = GalleryImage.objects.all()
     serializer_class = GalleryImageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsMarketerOrManagement]
 
 class StaffEnquiryViewSet(viewsets.ModelViewSet):
-    """Staff can view all enquiries and update their status (e.g., mark as RESOLVED)."""
+    """
+    Staff can view all enquiries; only CEO/Lead Dev/Admin can update status
+    (e.g., mark as RESOLVED) or delete.
+    """
     queryset = Enquiry.objects.all()
     serializer_class = EnquirySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsManagementOrReadOnly]
     
     def get_queryset(self):
         queryset = Enquiry.objects.all()

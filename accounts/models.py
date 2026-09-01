@@ -11,6 +11,9 @@ class User(AbstractUser):
         LEAD_DEVELOPER = 'LEAD_DEVELOPER', 'Lead Developer'
         ADMIN = 'ADMIN', 'Admin'
         RECEPTIONIST = 'RECEPTIONIST', 'Receptionist'
+        INSTRUCTOR = 'INSTRUCTOR', 'Instructor'
+        MARKETER = 'MARKETER', 'Marketer'
+        STAFF = 'STAFF', 'Staff'
         CUSTOMER = 'CUSTOMER', 'Customer'
 
     role = models.CharField(

@@ -45,7 +45,10 @@ class Course(models.Model):
 
 class Enrollment(models.Model):
     """
-    Tracks students enrolled in courses.
+    Legacy model — tracks enrollment for real User accounts.
+    Not used by the admin dashboard since students don't have accounts
+    in practice. Kept for potential future use; see Student model below
+    for the model actually used to track who's studying at PIHUB.
     """
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
@@ -56,3 +59,31 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.course.title}"
+
+
+class Student(models.Model):
+    """
+    Tracks people actively studying at PIHUB, independent of Certificate
+    (which only proves completion) and independent of User (students don't
+    have login accounts). Admin adds a student here the moment someone
+    starts a course, so PIHUB has a real count of who's currently enrolled,
+    not just who's finished.
+    """
+    class Status(models.TextChoices):
+        ACTIVE = 'ACTIVE', 'Active'
+        COMPLETED = 'COMPLETED', 'Completed'
+        DROPPED = 'DROPPED', 'Dropped Out'
+
+    name = models.CharField(max_length=100)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True)
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    enrolled_date = models.DateField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-enrolled_date']
+
+    def __str__(self):
+        return f"{self.name} - {self.course.title if self.course else 'No course'}"
