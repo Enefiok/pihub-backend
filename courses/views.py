@@ -1,14 +1,17 @@
 from rest_framework import viewsets, permissions
 from accounts.models import User
-from accounts.permissions import IsManagementOrReadOnly
+from accounts.permissions import IsCourseInstructorOrManagement, IsManagementOrReadOnly
 from .models import Course, Student
 from .serializers import CourseSerializer, StudentSerializer
+
 
 class CourseViewSet(viewsets.ModelViewSet):
     """
     API endpoint for courses.
     - Public: Can view active and coming-soon courses.
-    - Staff: Can view all courses; only CEO/Lead Dev/Admin can create, update, delete.
+    - Staff: Can view all courses.
+    - Management (CEO, Lead Dev, Admin): Full access (create/edit/delete any course).
+    - Assigned Instructors: Can create, edit, update, and delete ONLY their own assigned courses.
     """
     serializer_class = CourseSerializer
 
@@ -16,8 +19,9 @@ class CourseViewSet(viewsets.ModelViewSet):
         # Public can only view (GET requests)
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        # Staff must be authenticated AND management-level to create/update/delete
-        return [IsManagementOrReadOnly()]
+            
+        # Restrict write actions to Management or the assigned Instructor
+        return [IsCourseInstructorOrManagement()]
 
     def get_queryset(self):
         user = self.request.user
@@ -28,14 +32,19 @@ class CourseViewSet(viewsets.ModelViewSet):
                 status__in=[Course.Status.ACTIVE, Course.Status.COMING_SOON]
             )
             
-        # Staff sees all courses (including 'UNAVAILABLE' ones they might want to edit/reactivate)
+        # Staff sees all courses
         return Course.objects.all()
 
     def perform_create(self, serializer):
-        # Double-check role just in case
-        if not self.request.user.is_authenticated or self.request.user.role == User.Role.CUSTOMER:
+        user = self.request.user
+        if not user.is_authenticated or user.role == User.Role.CUSTOMER:
             raise permissions.PermissionDenied("Only staff can create courses.")
-        serializer.save()
+
+        # If an instructor creates a course, automatically assign them as the instructor
+        if user.role == User.Role.INSTRUCTOR and 'instructor' not in serializer.validated_data:
+            serializer.save(instructor=user)
+        else:
+            serializer.save()
 
 
 class StudentViewSet(viewsets.ModelViewSet):

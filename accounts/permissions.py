@@ -76,3 +76,40 @@ class IsManagementStrict(permissions.BasePermission):
             return True
 
         return request.user.role in self.STRICT_ROLES
+
+
+class IsCourseInstructorOrManagement(permissions.BasePermission):
+    """
+    For Course module.
+    - CEO, Lead Developer, Admin: full access (create/edit/delete any course).
+    - Instructor: can create, edit, and delete ONLY courses assigned to them.
+    - Everyone else who is authenticated: read-only.
+    """
+    MANAGEMENT_ROLES = ['CEO', 'LEAD_DEVELOPER', 'ADMIN']
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Allow Management and Instructors to initiate POST/PUT/PATCH/DELETE requests
+        return (
+            request.user.role in self.MANAGEMENT_ROLES or
+            request.user.role == 'INSTRUCTOR'
+        )
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Management can update or delete any course record
+        if request.user.role in self.MANAGEMENT_ROLES:
+            return True
+
+        # Instructors can edit or delete ONLY their assigned courses
+        if request.user.role == 'INSTRUCTOR':
+            return getattr(obj, 'instructor', None) == request.user
+
+        return False

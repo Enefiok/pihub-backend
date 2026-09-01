@@ -27,6 +27,17 @@ class Course(models.Model):
     image = models.ImageField(upload_to='courses/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     
+    # NEW FIELD: Link course to an instructor
+    # null=True/blank=True ensures existing courses without an instructor don't break
+    instructor = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='courses_taught',
+        help_text="The instructor assigned to teach this course."
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
