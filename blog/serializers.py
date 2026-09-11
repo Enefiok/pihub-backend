@@ -10,8 +10,6 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     author_name = serializers.SerializerMethodField()
-    # FIXED: Add SerializerMethodField for featured_image
-    featured_image = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -23,25 +21,16 @@ class BlogPostSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'slug', 'author', 'created_at', 'updated_at']
 
     def get_author_name(self, obj):
-        # Try to get full name, fallback to username
         if hasattr(obj.author, 'get_full_name'):
             full_name = obj.author.get_full_name()
             if full_name:
                 return full_name
         return obj.author.username
-    
-    # FIXED: Add method to return Cloudinary URL for featured_image
-    def get_featured_image(self, obj):
-        if obj.featured_image:
-            return obj.featured_image.url  # Cloudinary returns full URL already
-        return None
 
     def create(self, validated_data):
-        # Auto-generate slug from title if not provided
         if 'slug' not in validated_data or not validated_data['slug']:
             title = validated_data.get('title', '')
             validated_data['slug'] = slugify(title)
         
-        # Automatically set the author to the logged-in staff member
         validated_data['author'] = self.context['request'].user
         return super().create(validated_data)
