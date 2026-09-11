@@ -10,6 +10,8 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     author_name = serializers.SerializerMethodField()
+    # FIXED: Add SerializerMethodField for featured_image
+    featured_image = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -27,6 +29,12 @@ class BlogPostSerializer(serializers.ModelSerializer):
             if full_name:
                 return full_name
         return obj.author.username
+    
+    # FIXED: Add method to return Cloudinary URL for featured_image
+    def get_featured_image(self, obj):
+        if obj.featured_image:
+            return obj.featured_image.url  # Cloudinary returns full URL already
+        return None
 
     def create(self, validated_data):
         # Auto-generate slug from title if not provided
@@ -36,4 +44,4 @@ class BlogPostSerializer(serializers.ModelSerializer):
         
         # Automatically set the author to the logged-in staff member
         validated_data['author'] = self.context['request'].user
-        return super().create(validated_data)   
+        return super().create(validated_data)

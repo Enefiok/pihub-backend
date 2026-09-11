@@ -65,19 +65,17 @@ class NewsletterSerializer(serializers.ModelSerializer):
 
 
 class GalleryImageSerializer(serializers.ModelSerializer):
-    # NEW: Use SerializerMethodField to return the full absolute URL for the image
+    # FIXED: Cloudinary already returns full URLs, so just return the URL directly
     image = serializers.SerializerMethodField()
     
     class Meta:
         model = GalleryImage
         fields = ['id', 'title', 'image', 'category', 'display_order', 'is_active', 'created_at']
     
-    # NEW: Method to build the absolute URL
+    # FIXED: Simply return the Cloudinary URL
     def get_image(self, obj):
         if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url  # Cloudinary returns full URL already
         return None
 
 

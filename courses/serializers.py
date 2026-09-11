@@ -5,7 +5,7 @@ class CourseSerializer(serializers.ModelSerializer):
     # SHIELD FOR FRONTEND: Explicitly make these optional so missing keys don't cause 400 errors
     requirements = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     
-    # CHANGE: Use SerializerMethodField to return the full absolute URL
+    # FIXED: Use SerializerMethodField to return Cloudinary URL
     image = serializers.SerializerMethodField()
 
     class Meta:
@@ -16,12 +16,10 @@ class CourseSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
 
-    # ADD THIS METHOD:
+    # FIXED: Simply return the Cloudinary URL
     def get_image(self, obj):
         if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url  # Cloudinary returns full URL already
         return None
 
 
