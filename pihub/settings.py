@@ -150,16 +150,18 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Media Files Configuration
 MEDIA_URL = '/media/'
-# MEDIA_ROOT is no longer strictly needed for local storage since Cloudinary handles it, 
-# but we leave the URL mapping for Django's internal routing.
 
-# Cloudinary Configuration
+# Cloudinary Configuration (Using decouple.config for reliability)
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.environ.get('CLOUDINARY_API_KEY'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    cloud_name=config('CLOUDINARY_CLOUD_NAME', default=''),
+    api_key=config('CLOUDINARY_API_KEY', default=''),
+    api_secret=config('CLOUDINARY_API_SECRET', default=''),
     secure=True
 )
+
+# TEMPORARY DEBUG: Check if credentials are loaded in Render logs
+print(f"☁️ CLOUDINARY CLOUD NAME: {config('CLOUDINARY_CLOUD_NAME', default='NOT SET')}")
+print(f"🔑 CLOUDINARY API KEY: {config('CLOUDINARY_API_KEY', default='NOT SET')[:5]}...")
 
 # Admin Registration Secret Key (Loaded securely from .env via decouple)
 ADMIN_REGISTRATION_SECRET = config('ADMIN_REGISTRATION_SECRET', default='')
