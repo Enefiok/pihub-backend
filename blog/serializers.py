@@ -1,3 +1,4 @@
+import cloudinary
 from rest_framework import serializers
 from django.utils.text import slugify
 from .models import BlogPost, BlogCategory
@@ -10,6 +11,9 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     author_name = serializers.SerializerMethodField()
+    
+    # FORCE absolute URL
+    featured_image = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -26,6 +30,15 @@ class BlogPostSerializer(serializers.ModelSerializer):
             if full_name:
                 return full_name
         return obj.author.username
+
+    def get_featured_image(self, obj):
+        if obj.featured_image:
+            url = str(obj.featured_image)
+            if url.startswith('http'):
+                return url
+            cloud_name = cloudinary.config().cloud_name or 'grpuqogx'
+            return f"https://res.cloudinary.com/{cloud_name}/{url}"
+        return None
 
     def create(self, validated_data):
         if 'slug' not in validated_data or not validated_data['slug']:

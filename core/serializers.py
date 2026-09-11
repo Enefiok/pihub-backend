@@ -1,3 +1,4 @@
+import cloudinary
 from rest_framework import serializers
 from .models import Subscriber, Newsletter, GalleryImage, Enquiry
 from django.core.mail import EmailMultiAlternatives
@@ -37,7 +38,6 @@ class SubscribeSerializer(serializers.ModelSerializer):
                 msg.attach_alternative(html_content, "text/html")
                 msg.send()
                 logger.info(f"Welcome email sent successfully to {email}")
-                
             except Exception as e:
                 logger.error(f"Failed to send welcome email to {email}: {str(e)}")
             
@@ -56,10 +56,23 @@ class NewsletterSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_sent', 'sent_at', 'created_at']
 
 class GalleryImageSerializer(serializers.ModelSerializer):
+    # FORCE absolute URL to prevent frontend domain concatenation
+    image = serializers.SerializerMethodField()
+    
     class Meta:
         model = GalleryImage
-        # Cloudinary storage automatically handles the URL for the 'image' field
         fields = ['id', 'title', 'image', 'category', 'display_order', 'is_active', 'created_at']
+    
+    def get_image(self, obj):
+        if obj.image:
+            url = str(obj.image)
+            # If it's already a full URL, return it
+            if url.startswith('http'):
+                return url
+            # If it's a relative path (e.g., "image/upload/..."), make it absolute
+            cloud_name = cloudinary.config().cloud_name or 'grpuqogx'
+            return f"https://res.cloudinary.com/{cloud_name}/{url}"
+        return None
 
 class EnquirySerializer(serializers.ModelSerializer):
     class Meta:
