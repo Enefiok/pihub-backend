@@ -8,7 +8,7 @@ from .serializers import CourseSerializer, StudentSerializer
 class CourseViewSet(viewsets.ModelViewSet):
     """
     API endpoint for courses.
-    - Public: Can view active and coming-soon courses.
+    - Public: Can view ALL courses (frontend handles status display).
     - Staff: Can view all courses.
     - Management (CEO, Lead Dev, Admin): Full access (create/edit/delete any course).
     - Assigned Instructors: Can create, edit, update, and delete ONLY their own assigned courses.
@@ -24,15 +24,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         return [IsCourseInstructorOrManagement()]
 
     def get_queryset(self):
-        user = self.request.user
-        
-        # Public (anonymous or customer) only sees active and coming-soon courses
-        if user.is_anonymous or (user.is_authenticated and user.role == User.Role.CUSTOMER):
-            return Course.objects.filter(
-                status__in=[Course.Status.ACTIVE, Course.Status.COMING_SOON]
-            )
-            
-        # Staff sees all courses
+        # EVERYONE sees all courses - frontend handles unavailable/coming soon display
         return Course.objects.all()
 
     def perform_create(self, serializer):

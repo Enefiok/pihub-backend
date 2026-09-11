@@ -4,7 +4,9 @@ from .models import Course, Student
 class CourseSerializer(serializers.ModelSerializer):
     # SHIELD FOR FRONTEND: Explicitly make these optional so missing keys don't cause 400 errors
     requirements = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    image = serializers.ImageField(required=False, allow_null=True)
+    
+    # CHANGE: Use SerializerMethodField to return the full absolute URL
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -13,6 +15,14 @@ class CourseSerializer(serializers.ModelSerializer):
             'requirements', 'image', 'status', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+
+    # ADD THIS METHOD:
+    def get_image(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+        return None
 
 
 class StudentSerializer(serializers.ModelSerializer):

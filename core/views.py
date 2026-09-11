@@ -40,6 +40,12 @@ class PublicGalleryListView(generics.ListAPIView):
         if category:
             queryset = queryset.filter(category=category)
         return queryset
+    
+    # NEW: Pass the request to the serializer context so it can build absolute URLs
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
 class PublicEnquiryCreateView(generics.CreateAPIView):
     """Allows public users to submit contact enquiries."""

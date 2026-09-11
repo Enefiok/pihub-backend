@@ -168,11 +168,23 @@ EMAIL_TIMEOUT = 5
 # ==========================================
 # CORS Configuration (Allows frontend to communicate with backend)
 # ==========================================
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS',
-    default='https://enefiok.github.io,http://localhost:3000,http://127.0.0.1:3000',
-    cast=Csv()
-)
+
+# 1. Allow credentials (required for tokens/sessions)
+CORS_ALLOW_CREDENTIALS = True
+
+# 2. Hardcode the allowed origins (Bypassing .env for now to guarantee it works)
+CORS_ALLOWED_ORIGINS = [
+    "https://enefiok.github.io",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:5502",   # ✅ Your Dashboard
+    "http://127.0.0.1:5502",  # ✅ Your Dashboard
+]
+
+# Optional: If you are still getting preflight errors, uncomment the line below
+# CORS_ALLOW_ALL_ORIGINS = True 
 
 
 
