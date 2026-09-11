@@ -33,4 +33,4 @@ class Certificate(models.Model):
         ordering = ['-issue_date']
 
     def __str__(self):
-        return f"Certificate {self.certificate_id} for {self.student_name}"
+        return f"Certificate {self.certificate_id} for {self.student_name}" 

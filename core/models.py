@@ -5,6 +5,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
+from cloudinary.models import CloudinaryField  # ✅ Added Cloudinary import
 
 class Subscriber(models.Model):
     email = models.EmailField(unique=True)
@@ -80,7 +81,7 @@ class GalleryImage(models.Model):
     ]
     
     title = models.CharField(max_length=100)
-    image = models.ImageField(upload_to='gallery/%Y/%m/')
+    image = CloudinaryField('image')  # ✅ Changed from ImageField to CloudinaryField
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='HOME_CAROUSEL')
     display_order = models.PositiveIntegerField(default=0, help_text="Lower numbers display first")
     is_active = models.BooleanField(default=True)

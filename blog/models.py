@@ -1,5 +1,6 @@
 from django.db import models
 from accounts.models import User
+from cloudinary.models import CloudinaryField  # ✅ Added Cloudinary import
 
 class BlogCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -23,7 +24,7 @@ class BlogPost(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
     content = models.TextField()
-    featured_image = models.ImageField(upload_to='blog/', blank=True, null=True)
+    featured_image = CloudinaryField('image', blank=True, null=True)  # ✅ Changed to CloudinaryField
     
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts')
     category = models.ForeignKey(BlogCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')

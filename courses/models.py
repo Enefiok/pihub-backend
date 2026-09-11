@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from accounts.models import User
+from cloudinary.models import CloudinaryField  # ✅ Added Cloudinary import
 
 class Course(models.Model):
     """
@@ -24,7 +25,7 @@ class Course(models.Model):
         help_text="Optional: Prerequisites or things needed for the course."
     )
     
-    image = models.ImageField(upload_to='courses/', blank=True, null=True)
+    image = CloudinaryField('image', blank=True, null=True)  # ✅ Changed to CloudinaryField
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     
     # NEW FIELD: Link course to an instructor

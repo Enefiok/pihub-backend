@@ -8,6 +8,13 @@ import os
 from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
+from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -33,6 +40,7 @@ INSTALLED_APPS = [
     'corsheaders', # Added for frontend communication
     'rest_framework',
     'rest_framework.authtoken',
+    'cloudinary_storage', # Added for Cloudinary
     
     # PIHUB Local apps
     'accounts',
@@ -113,10 +121,10 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Modern Django 4.2+ storage configuration for WhiteNoise
+# Modern Django 4.2+ storage configuration
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage", # Updated for Cloudinary
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -140,9 +148,18 @@ REST_FRAMEWORK = {
 # Custom User Model (CRITICAL: Must be set before the first migration)
 AUTH_USER_MODEL = 'accounts.User'
 
-# Media Files Configuration (for user-uploaded images)
+# Media Files Configuration
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT is no longer strictly needed for local storage since Cloudinary handles it, 
+# but we leave the URL mapping for Django's internal routing.
+
+# Cloudinary Configuration
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    secure=True
+)
 
 # Admin Registration Secret Key (Loaded securely from .env via decouple)
 ADMIN_REGISTRATION_SECRET = config('ADMIN_REGISTRATION_SECRET', default='')
@@ -185,9 +202,6 @@ CORS_ALLOWED_ORIGINS = [
 
 # Optional: If you are still getting preflight errors, uncomment the line below
 # CORS_ALLOW_ALL_ORIGINS = True 
-
-
-
 
 # ==========================================
 # Payment Gateway Configuration (Paystack)
