@@ -7,10 +7,10 @@ class BlogCategorySerializer(serializers.ModelSerializer):
         model = BlogCategory
         fields = ['id', 'name', 'slug']
 
+# ✅ FIXED: Removed SerializerMethodField so uploads actually work
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     author_name = serializers.SerializerMethodField()
-    # REMOVED SerializerMethodField for featured_image so it can accept uploads
 
     class Meta:
         model = BlogPost

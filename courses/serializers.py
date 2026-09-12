@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from .models import Course, Student
 
+# ✅ FIXED: Removed SerializerMethodField so uploads actually work
 class CourseSerializer(serializers.ModelSerializer):
-    # Make requirements optional
     requirements = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
@@ -11,8 +11,6 @@ class CourseSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'description', 'duration', 
             'requirements', 'image', 'status', 'created_at', 'updated_at'
         ]
-        # 'image' is NOT in read_only_fields, so DRF will accept the upload!
-        # django-cloudinary-storage will automatically return the full URL.
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
 
 class StudentSerializer(serializers.ModelSerializer):
