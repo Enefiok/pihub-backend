@@ -11,9 +11,6 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     author_name = serializers.SerializerMethodField()
-    
-    # We MUST use this to force the absolute URL, exactly like the working Gallery
-    featured_image = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -31,16 +28,18 @@ class BlogPostSerializer(serializers.ModelSerializer):
                 return full_name
         return obj.author.username
 
-    def get_featured_image(self, obj):
-        if obj.featured_image:
-            url = str(obj.featured_image)
-            # If it's already a full URL, return it
-            if url.startswith('http'):
-                return url
-            # If it's a relative path, make it absolute
-            cloud_name = cloudinary.config().cloud_name or 'grpuqogx'
-            return f"https://res.cloudinary.com/{cloud_name}/{url}"
-        return None
+    def to_representation(self, instance):
+        # 1. Get the default data (allows file upload to succeed)
+        representation = super().to_representation(instance)
+        
+        # 2. Fix the featured_image URL if it's relative
+        if representation.get('featured_image'):
+            url = str(representation['featured_image'])
+            if not url.startswith('http'):
+                cloud_name = cloudinary.config().cloud_name or 'grpuqogx'
+                representation['featured_image'] = f"https://res.cloudinary.com/{cloud_name}/{url}"
+        
+        return representation
 
     def create(self, validated_data):
         if 'slug' not in validated_data or not validated_data['slug']:
