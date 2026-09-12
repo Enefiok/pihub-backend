@@ -1,9 +1,12 @@
+import cloudinary
 from rest_framework import serializers
 from .models import Course, Student
 
-# ✅ FIXED: Removed SerializerMethodField so uploads actually work
 class CourseSerializer(serializers.ModelSerializer):
     requirements = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    
+    # We MUST use this to force the absolute URL, exactly like the working Gallery
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -12,6 +15,18 @@ class CourseSerializer(serializers.ModelSerializer):
             'requirements', 'image', 'status', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+
+    def get_image(self, obj):
+        if obj.image:
+            url = str(obj.image)
+            # If it's already a full URL, return it
+            if url.startswith('http'):
+                return url
+            # If it's a relative path (e.g., "image/upload/..."), make it absolute
+            cloud_name = cloudinary.config().cloud_name or 'grpuqogx'
+            return f"https://res.cloudinary.com/{cloud_name}/{url}"
+        return None
+
 
 class StudentSerializer(serializers.ModelSerializer):
     course_title = serializers.CharField(source='course.title', read_only=True, default=None)
