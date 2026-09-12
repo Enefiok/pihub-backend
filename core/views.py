@@ -35,13 +35,12 @@ class PublicGalleryListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        queryset = GalleryImage.objects.filter(is_active=True)
+        queryset = GalleryImage.objects.filter(is_active=True).order_by('display_order', '-created_at')
         category = self.request.query_params.get('category', None)
         if category:
             queryset = queryset.filter(category=category)
         return queryset
     
-    # NEW: Pass the request to the serializer context so it can build absolute URLs
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
@@ -91,12 +90,20 @@ class StaffSubscriberViewSet(viewsets.ModelViewSet):
 
 class StaffGalleryViewSet(viewsets.ModelViewSet):
     """
-    Full CRUD for Gallery Images. Staff only.
-    All staff can view; CEO/Lead Dev/Admin/Marketer can create, edit, delete.
+    Full CRUD for Gallery Images. 
+    Public can view active images; CEO/Lead Dev/Admin/Marketer can create, edit, delete.
     """
-    queryset = GalleryImage.objects.all()
+    # Only fetch active images, ordered nicely for the public site
+    queryset = GalleryImage.objects.filter(is_active=True).order_by('display_order', '-created_at')
     serializer_class = GalleryImageSerializer
-    permission_classes = [IsMarketerOrManagement]
+
+    def get_permissions(self):
+        # ✅ ALLOW PUBLIC: Anyone can view the gallery (list and retrieve)
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        
+        # ✅ REQUIRE AUTH: Only specific staff can upload, edit, or delete
+        return [IsMarketerOrManagement()]
 
 class StaffEnquiryViewSet(viewsets.ModelViewSet):
     """
