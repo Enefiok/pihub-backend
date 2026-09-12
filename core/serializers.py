@@ -1,3 +1,4 @@
+import cloudinary
 from rest_framework import serializers
 from .models import Subscriber, Newsletter, GalleryImage, Enquiry
 from django.core.mail import EmailMultiAlternatives
@@ -54,11 +55,23 @@ class NewsletterSerializer(serializers.ModelSerializer):
         fields = ['id', 'subject', 'content', 'is_sent', 'sent_at', 'created_at']
         read_only_fields = ['id', 'is_sent', 'sent_at', 'created_at']
 
-# ✅ FIXED: Removed SerializerMethodField so uploads actually work
 class GalleryImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = GalleryImage
         fields = ['id', 'title', 'image', 'category', 'display_order', 'is_active', 'created_at']
+
+    def to_representation(self, instance):
+        # 1. Get the default data (this allows the file upload to succeed)
+        representation = super().to_representation(instance)
+        
+        # 2. Fix the image URL if Cloudinary returned a relative path
+        if representation.get('image'):
+            url = str(representation['image'])
+            if not url.startswith('http'):
+                cloud_name = cloudinary.config().cloud_name or 'grpuqogx'
+                representation['image'] = f"https://res.cloudinary.com/{cloud_name}/{url}"
+        
+        return representation
 
 class EnquirySerializer(serializers.ModelSerializer):
     class Meta:
