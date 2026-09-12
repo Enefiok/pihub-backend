@@ -1,9 +1,10 @@
+import cloudinary
 from rest_framework import serializers
 from .models import Course, Student
 
 class CourseSerializer(serializers.ModelSerializer):
-    # SHIELD FOR FRONTEND: Explicitly make these optional so missing keys don't cause 400 errors
     requirements = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -11,10 +12,13 @@ class CourseSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'description', 'duration', 
             'requirements', 'image', 'status', 'created_at', 'updated_at'
         ]
-        # 'image' is NOT in read_only_fields, so it can be uploaded!
-        # django-cloudinary-storage will automatically return the full Cloudinary URL.
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
 
+    def get_image(self, obj):
+        if obj.image:
+            # CloudinaryField returns a CloudinaryResource, get the URL
+            return obj.image.url
+        return None
 
 class StudentSerializer(serializers.ModelSerializer):
     course_title = serializers.CharField(source='course.title', read_only=True, default=None)
