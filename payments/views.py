@@ -1,6 +1,7 @@
 import json
 import hashlib
 import hmac
+import logging
 import requests
 from django.conf import settings
 from django.http import JsonResponse
@@ -9,7 +10,10 @@ from django.views.decorators.http import require_POST
 from .models import Payment
 from workspaces.models import Booking
 
+logger = logging.getLogger(__name__)
+
 # --- 1. INITIALIZE PAYMENT (Called by Frontend) ---
+@csrf_exempt
 @require_POST
 def initialize_payment(request):
     """
@@ -19,7 +23,7 @@ def initialize_payment(request):
     try:
         data = json.loads(request.body)
         booking_reference = data.get('reference')
-        amount = data.get('amount') # Amount in Naira (e.g., 5000)
+        amount = data.get('amount')  # Amount in Naira (e.g., 5000)
         email = data.get('email')
 
         if not all([booking_reference, amount, email]):
@@ -38,7 +42,7 @@ def initialize_payment(request):
             "email": email,
             "amount": amount_in_kobo,
             "reference": booking_reference,
-            # "callback_url": "https://your-frontend-url.com/payment-success" 
+            # "callback_url": "https://your-frontend-url.com/payment-success"
         }
 
         response = requests.post(url, headers=headers, json=payload)
@@ -66,7 +70,7 @@ def paystack_webhook(request):
     Secure endpoint to receive payment status updates from Paystack.
     Verifies the signature to ensure the request is genuinely from Paystack.
     """
-    # 1. Verify the signature
+    # 1. Verify the signature (SECURE PRODUCTION CHECK)
     signature = request.headers.get('x-paystack-signature')
     if not signature:
         return JsonResponse({"error": "Missing signature"}, status=400)
@@ -78,7 +82,8 @@ def paystack_webhook(request):
         hashlib.sha512
     ).hexdigest()
     
-    if hash_digest != signature:
+    # Use hmac.compare_digest to prevent timing attacks
+    if not hmac.compare_digest(hash_digest, signature):
         return JsonResponse({"error": "Invalid signature"}, status=401)
 
     # 2. Process the payload
@@ -86,10 +91,14 @@ def paystack_webhook(request):
         payload = json.loads(body)
         event = payload.get('event')
         
+        logger.info(f"🔔 Webhook received event: {event}")
+        
         if event == 'charge.success':
             data = payload.get('data', {})
             reference = data.get('reference')
-            amount = data.get('amount') / 100  # Convert kobo to Naira
+            amount = data.get('amount', 0) / 100  # Convert kobo to Naira
+            
+            logger.info(f"✅ Payment Success! Reference: {reference}, Amount: {amount}")
             
             try:
                 # Find the associated Booking
@@ -103,7 +112,7 @@ def paystack_webhook(request):
                         'status': 'SUCCESS',
                         'gateway': 'PAYSTACK',
                         'booking': booking,
-                        'gateway_response': data # Store as JSON/dict
+                        'gateway_response': data  # Store as JSON/dict
                     }
                 )
                 
@@ -114,16 +123,21 @@ def paystack_webhook(request):
                 # Activate the booking if it's still pending
                 if booking.status == 'PENDING':
                     booking.activate()
+                    logger.info(f"✅ Booking {reference} activated successfully.")
                     return JsonResponse({"message": "Booking activated successfully."}, status=200)
                 else:
+                    logger.info(f"ℹ️ Booking {reference} already processed.")
                     return JsonResponse({"message": "Booking already processed."}, status=200)
                     
             except Booking.DoesNotExist:
+                logger.error(f"❌ Booking not found for reference: {reference}")
                 return JsonResponse({"error": "Booking not found for this reference."}, status=404)
 
+        logger.info(f"ℹ️ Event ignored: {event}")
         return JsonResponse({"message": "Event ignored."}, status=200)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON payload."}, status=400)
     except Exception as e:
+        logger.error(f"❌ Webhook processing error: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
