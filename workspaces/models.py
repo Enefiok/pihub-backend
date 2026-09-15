@@ -1,6 +1,8 @@
+import uuid
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+
 
 class WorkspacePlan(models.Model):
     """
@@ -35,7 +37,6 @@ class WorkspaceTag(models.Model):
     
     # CRITICAL FIX: Changed to OneToOneField. 
     # A tag can only belong to ONE active booking at a time.
-    # This makes `booking.assigned_tag` return the actual Tag object directly.
     current_booking = models.OneToOneField(
         'Booking', 
         on_delete=models.SET_NULL, 
@@ -76,13 +77,13 @@ class Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # CRITICAL ADDITION: The unique reference ID from Paystack/Flutterwave
+    # SAFE AUTO-GENERATION: blank=True, null=True allows existing rows to stay intact
     reference = models.CharField(
         max_length=100, 
         unique=True, 
         blank=True, 
         null=True, 
-        help_text="Payment gateway transaction reference ID"
+        help_text="Payment gateway transaction reference ID (Auto-generated on save)"
     )
     
     # Customer details (stored at time of booking)
@@ -99,6 +100,12 @@ class Booking(models.Model):
     
     def __str__(self):
         return f"Booking {self.id} - {self.customer_name} ({self.status})"
+
+    # --- MAGIC HAPPENS HERE: Auto-generate reference on save if it's empty ---
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = f"BK-{uuid.uuid4().hex[:10].upper()}"
+        super().save(*args, **kwargs)
     
     def activate(self):
         """Activate booking and assign a tag securely"""
@@ -130,7 +137,6 @@ class Booking(models.Model):
             self.save()
             
             # Release the tag back to pool
-            # Because we used OneToOneField, self.assigned_tag is the actual Tag object
             if hasattr(self, 'assigned_tag') and self.assigned_tag:
                 tag = self.assigned_tag
                 tag.is_available = True
