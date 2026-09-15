@@ -25,7 +25,8 @@ SECRET_KEY = config('SECRET_KEY', default='your-local-fallback-key-change-in-pro
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+# UPDATED: Added Render domain and ngrok to default ALLOWED_HOSTS
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,pihub-backend.onrender.com,.ngrok-free.dev', cast=Csv())
 
 # Application definition
 INSTALLED_APPS = [
@@ -198,8 +199,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
-    "http://localhost:5502",   # ✅ Your Dashboard
-    "http://127.0.0.1:5502",  # ✅ Your Dashboard
+    "http://localhost:5502",   
+    "http://127.0.0.1:5502",
+    "https://duller-eatable-semisweet.ngrok-free.dev", 
 ]
 
 # Optional: If you are still getting preflight errors, uncomment the line below
