@@ -35,10 +35,11 @@ class BookingSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'status', 'payment_verified', 'created_at', 'end_date', 'reference']
 
     def validate_start_date(self, value):
-        """Ensure start date is not in the past (small buffer to tolerate
-        millisecond timing gaps for auto-generated 'now' timestamps, e.g.
-        from walk-in bookings)."""
-        if value < timezone.now() - timedelta(minutes=1):
+        """Ensure start date is not in the past. 
+        We only check the DATE, so users can still book for 'today' 
+        even if the hardcoded 10:00 AM time has already passed."""
+        today = timezone.now().date()
+        if value.date() < today:
             raise serializers.ValidationError("Start date cannot be in the past.")
         return value
 
