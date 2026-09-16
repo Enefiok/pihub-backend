@@ -18,6 +18,10 @@ class BookingSerializer(serializers.ModelSerializer):
     plan_name = serializers.CharField(source='workspace_plan.name', read_only=True)
     plan_price = serializers.DecimalField(source='workspace_plan.price', max_digits=10, decimal_places=2, read_only=True)
     tag_code = serializers.CharField(source='assigned_tag.tag_code', read_only=True, default=None)
+    
+    # 🔒 SECURITY: Make reference read-only so frontend can't spoof it, 
+    # but it will still be included in the JSON response after creation!
+    reference = serializers.CharField(read_only=True)
 
     class Meta:
         model = Booking
@@ -25,11 +29,10 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'workspace_plan', 'plan_name', 'plan_price',
             'status', 'start_date', 'end_date', 'payment_verified',
             'customer_name', 'customer_email', 'customer_phone', 
-            'reference', 'tag_code', 'created_at'  # <-- ADDED 'reference' and 'tag_code' HERE
+            'reference', 'tag_code', 'created_at'
         ]
-        # Notice 'reference' is NOT in read_only_fields. 
-        # This allows the frontend (or Postman) to send it during checkout.
-        read_only_fields = ['id', 'status', 'payment_verified', 'created_at', 'end_date']
+        # Added 'reference' to read_only_fields for security
+        read_only_fields = ['id', 'status', 'payment_verified', 'created_at', 'end_date', 'reference']
 
     def validate_start_date(self, value):
         """Ensure start date is not in the past (small buffer to tolerate
@@ -42,6 +45,7 @@ class BookingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """
         Automatically calculate end_date based on the plan's duration.
+        The model's save() method will automatically generate the 'reference'.
         """
         # .pop() removes the item from validated_data so it isn't passed twice to .create()
         plan = validated_data.pop('workspace_plan')
@@ -51,8 +55,7 @@ class BookingSerializer(serializers.ModelSerializer):
         end_date = start_date + timedelta(days=plan.duration_days)
         
         # Create the booking in PENDING status
-        # Because we added 'reference' to the fields list, it will automatically 
-        # be saved here if the frontend/Postman included it in the request!
+        # The model's save() method will auto-generate the reference here!
         booking = Booking.objects.create(
             workspace_plan=plan,
             status=Booking.Status.PENDING,
