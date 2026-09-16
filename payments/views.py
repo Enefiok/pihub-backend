@@ -19,18 +19,27 @@ def initialize_payment(request):
     """
     Called by the frontend to initialize a Paystack transaction.
     Returns the authorization_url and reference.
+    SECURITY: Fetches the amount from the database to prevent frontend manipulation.
     """
     try:
         data = json.loads(request.body)
         booking_reference = data.get('reference')
-        amount = data.get('amount')  # Amount in Naira (e.g., 5000)
         email = data.get('email')
 
-        if not all([booking_reference, amount, email]):
-            return JsonResponse({"error": "Missing reference, amount, or email."}, status=400)
+        # We no longer require 'amount' from the frontend for security
+        if not all([booking_reference, email]):
+            return JsonResponse({"error": "Missing reference or email."}, status=400)
+
+        # 🔒 SECURITY FIX: Fetch the booking and its actual price from the database
+        try:
+            booking = Booking.objects.get(reference=booking_reference)
+            # Get the exact price from the linked Workspace Plan (e.g., 3000.00)
+            amount = float(booking.workspace_plan.price)
+        except Booking.DoesNotExist:
+            return JsonResponse({"error": "Booking not found for this reference."}, status=404)
 
         # Paystack expects amount in kobo (multiply Naira by 100)
-        amount_in_kobo = int(float(amount) * 100)
+        amount_in_kobo = int(amount * 100)
 
         # Call Paystack API
         url = "https://api.paystack.co/transaction/initialize"
@@ -59,6 +68,7 @@ def initialize_payment(request):
             return JsonResponse({"error": response_data.get('message', 'Failed to initialize payment')}, status=400)
 
     except Exception as e:
+        logger.error(f"❌ Payment initialization error: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
 
