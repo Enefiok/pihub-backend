@@ -195,6 +195,8 @@ CORS_ALLOW_CREDENTIALS = True
 # 2. Hardcode the allowed origins (Bypassing .env for now to guarantee it works)
 CORS_ALLOWED_ORIGINS = [
     "https://enefiok.github.io",
+    "https://pihubng.com",
+    "https://www.pihubng.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5500",
