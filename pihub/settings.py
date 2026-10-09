@@ -205,8 +205,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://enefiok.github.io",
     "https://pihubng.com",
     "https://www.pihubng.com",
-    "https://systemdesk.pihubng.com",       # <--- ADDED THIS
-    "https://www.systemdesk.pihubng.com",   # <--- ADDED THIS TOO
+    "https://systemdesk.pihubng.com",      
+    "https://www.systemdesk.pihubng.com",   
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5500",
