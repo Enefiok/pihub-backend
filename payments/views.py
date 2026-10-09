@@ -9,6 +9,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import Payment
 from workspaces.models import Booking
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from .serializers import PaymentSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -151,3 +154,11 @@ def paystack_webhook(request):
     except Exception as e:
         logger.error(f"❌ Webhook processing error: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+
+
+class PaymentListView(generics.ListAPIView):
+    queryset = Payment.objects.all().select_related('booking').order_by('-created_at')
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
