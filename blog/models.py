@@ -1,6 +1,6 @@
 from django.db import models
 from accounts.models import User
-from cloudinary.models import CloudinaryField  # ✅ Added Cloudinary import
+from cloudinary.models import CloudinaryField
 
 class BlogCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -24,22 +24,8 @@ class BlogPost(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
     content = models.TextField()
-    featured_image = CloudinaryField('image', blank=True, null=True)  # ✅ Changed to CloudinaryField
+    featured_image = CloudinaryField('image', blank=True, null=True)
     
-    # ✅ SEO Optimization Fields
-    meta_title = models.CharField(
-        max_length=70, 
-        blank=True, 
-        null=True, 
-        help_text="SEO Title (50-60 characters optimal for Google)"
-    )
-    meta_description = models.TextField(
-        max_length=160, 
-        blank=True, 
-        null=True, 
-        help_text="SEO Meta Description (150-160 characters max)"
-    )
-
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts')
     category = models.ForeignKey(BlogCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='posts')
     
@@ -48,14 +34,18 @@ class BlogPost(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # ✅ NEW: Custom SEO Fields
+    meta_title = models.CharField(max_length=70, blank=True, null=True)
+    meta_description = models.TextField(max_length=160, blank=True, null=True)
+
     class Meta:
         ordering = ['-created_at']
 
+    def __str__(self):
+        return self.title  
+
+    # ✅ NEW: Auto-generate meta_title if left blank
     def save(self, *args, **kwargs):
-        # Automatically generate default meta_title if empty
-        if not self.meta_title and self.title:
+        if not self.meta_title:
             self.meta_title = f"{self.title} | PIHUB Akwa Ibom"
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.title

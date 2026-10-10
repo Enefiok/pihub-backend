@@ -17,7 +17,8 @@ class BlogPostSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'slug', 'category', 'category_name', 
             'content', 'featured_image', 'author', 'author_name', 
-            'status', 'created_at', 'updated_at'
+            'status', 'created_at', 'updated_at',
+            'meta_title', 'meta_description' # ✅ NEW: Added SEO fields
         ]
         read_only_fields = ['id', 'slug', 'author', 'created_at', 'updated_at']
 
