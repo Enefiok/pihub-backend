@@ -36,12 +36,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',  # ✅ NEW: Added for dynamic XML sitemap generation
 
     # Third-party apps
-    'corsheaders', # Added for frontend communication
+    'corsheaders',              # Added for frontend communication
     'rest_framework',
     'rest_framework.authtoken',
-    'cloudinary_storage', # Added for Cloudinary
+    'cloudinary_storage',       # Added for Cloudinary
     
     # PIHUB Local apps
     'accounts',
