@@ -1,12 +1,9 @@
 from django.db import models
 from django.utils.text import slugify
 from accounts.models import User
-from cloudinary.models import CloudinaryField  # ✅ Added Cloudinary import
+from cloudinary.models import CloudinaryField
 
 class Course(models.Model):
-    """
-    PIHUB Courses as per Section 7
-    """
     class Status(models.TextChoices):
         ACTIVE = 'ACTIVE', 'Active'
         UNAVAILABLE = 'UNAVAILABLE', 'Unavailable'
@@ -17,27 +14,14 @@ class Course(models.Model):
     description = models.TextField()
     duration = models.CharField(max_length=50, help_text="e.g., 4 weeks, 3 days")
     
-    # UPDATED: Made strictly optional for the database and frontend
-    requirements = models.TextField(
-        blank=True, 
-        null=True, 
-        default='', 
-        help_text="Optional: Prerequisites or things needed for the course."
-    )
+    # NEW FIELD: Required for referral discount calculations
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Base price of the course in NGN.")
     
-    image = CloudinaryField('image', blank=True, null=True)  # ✅ Changed to CloudinaryField
+    requirements = models.TextField(blank=True, null=True, default='', help_text="Optional: Prerequisites or things needed.")
+    image = CloudinaryField('image', blank=True, null=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
     
-    # NEW FIELD: Link course to an instructor
-    # null=True/blank=True ensures existing courses without an instructor don't break
-    instructor = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
-        related_name='courses_taught',
-        help_text="The instructor assigned to teach this course."
-    )
+    instructor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='courses_taught', help_text="The instructor assigned to teach this course.")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -49,19 +33,12 @@ class Course(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        # Auto-generate slug from title if not provided
         if not self.slug:
             self.slug = slugify(self.title)
         super().save(*args, **kwargs)
 
 
 class Enrollment(models.Model):
-    """
-    Legacy model — tracks enrollment for real User accounts.
-    Not used by the admin dashboard since students don't have accounts
-    in practice. Kept for potential future use; see Student model below
-    for the model actually used to track who's studying at PIHUB.
-    """
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='enrollments')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
     enrolled_at = models.DateTimeField(auto_now_add=True)
@@ -74,13 +51,6 @@ class Enrollment(models.Model):
 
 
 class Student(models.Model):
-    """
-    Tracks people actively studying at PIHUB, independent of Certificate
-    (which only proves completion) and independent of User (students don't
-    have login accounts). Admin adds a student here the moment someone
-    starts a course, so PIHUB has a real count of who's currently enrolled,
-    not just who's finished.
-    """
     class Status(models.TextChoices):
         ACTIVE = 'ACTIVE', 'Active'
         COMPLETED = 'COMPLETED', 'Completed'

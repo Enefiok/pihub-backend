@@ -7,55 +7,37 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.core.mail import send_mail
 from .models import Payment
 from workspaces.models import Booking
+from referrals.models import CourseRegistration
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from .serializers import PaymentSerializer
 
 logger = logging.getLogger(__name__)
 
-# --- 1. INITIALIZE PAYMENT (Called by Frontend) ---
 @csrf_exempt
 @require_POST
 def initialize_payment(request):
-    """
-    Called by the frontend to initialize a Paystack transaction.
-    Returns the authorization_url and reference.
-    SECURITY: Fetches the amount from the database to prevent frontend manipulation.
-    """
     try:
         data = json.loads(request.body)
         booking_reference = data.get('reference')
         email = data.get('email')
 
-        # We no longer require 'amount' from the frontend for security
         if not all([booking_reference, email]):
             return JsonResponse({"error": "Missing reference or email."}, status=400)
 
-        # 🔒 SECURITY FIX: Fetch the booking and its actual price from the database
         try:
             booking = Booking.objects.get(reference=booking_reference)
-            # Get the exact price from the linked Workspace Plan (e.g., 3000.00)
             amount = float(booking.workspace_plan.price)
         except Booking.DoesNotExist:
             return JsonResponse({"error": "Booking not found for this reference."}, status=404)
 
-        # Paystack expects amount in kobo (multiply Naira by 100)
         amount_in_kobo = int(amount * 100)
-
-        # Call Paystack API
         url = "https://api.paystack.co/transaction/initialize"
-        headers = {
-            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "email": email,
-            "amount": amount_in_kobo,
-            "reference": booking_reference,
-            # "callback_url": "https://your-frontend-url.com/payment-success"
-        }
+        headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}", "Content-Type": "application/json"}
+        payload = {"email": email, "amount": amount_in_kobo, "reference": booking_reference}
 
         response = requests.post(url, headers=headers, json=payload)
         response_data = response.json()
@@ -75,78 +57,69 @@ def initialize_payment(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-# --- 2. SECURE WEBHOOK (Called by Paystack) ---
 @csrf_exempt
 @require_POST
 def paystack_webhook(request):
-    """
-    Secure endpoint to receive payment status updates from Paystack.
-    Verifies the signature to ensure the request is genuinely from Paystack.
-    """
-    # 1. Verify the signature (SECURE PRODUCTION CHECK)
     signature = request.headers.get('x-paystack-signature')
     if not signature:
         return JsonResponse({"error": "Missing signature"}, status=400)
     
     body = request.body
-    hash_digest = hmac.new(
-        settings.PAYSTACK_SECRET_KEY.encode('utf-8'),
-        body,
-        hashlib.sha512
-    ).hexdigest()
+    hash_digest = hmac.new(settings.PAYSTACK_SECRET_KEY.encode('utf-8'), body, hashlib.sha512).hexdigest()
     
-    # Use hmac.compare_digest to prevent timing attacks
     if not hmac.compare_digest(hash_digest, signature):
         return JsonResponse({"error": "Invalid signature"}, status=401)
 
-    # 2. Process the payload
     try:
         payload = json.loads(body)
         event = payload.get('event')
         
-        logger.info(f"🔔 Webhook received event: {event}")
-        
         if event == 'charge.success':
             data = payload.get('data', {})
             reference = data.get('reference')
-            amount = data.get('amount', 0) / 100  # Convert kobo to Naira
+            amount = data.get('amount', 0) / 100
             
-            logger.info(f"✅ Payment Success! Reference: {reference}, Amount: {amount}")
-            
+            # 1. Try to find as Booking (Workspace flow)
             try:
-                # Find the associated Booking
                 booking = Booking.objects.get(reference=reference)
-                
-                # Find or Create the Payment record
                 payment, created = Payment.objects.get_or_create(
                     transaction_id=reference,
-                    defaults={
-                        'amount': amount,
-                        'status': 'SUCCESS',
-                        'gateway': 'PAYSTACK',
-                        'booking': booking,
-                        'gateway_response': data  # Store as JSON/dict
-                    }
+                    defaults={'amount': amount, 'status': 'SUCCESS', 'gateway': 'PAYSTACK', 'booking': booking, 'gateway_response': data}
                 )
-                
                 if not created:
                     payment.status = 'SUCCESS'
                     payment.save()
-
-                # Activate the booking if it's still pending
                 if booking.status == 'PENDING':
                     booking.activate()
-                    logger.info(f"✅ Booking {reference} activated successfully.")
-                    return JsonResponse({"message": "Booking activated successfully."}, status=200)
-                else:
-                    logger.info(f"ℹ️ Booking {reference} already processed.")
-                    return JsonResponse({"message": "Booking already processed."}, status=200)
+                return JsonResponse({"message": "Booking activated successfully."}, status=200)
                     
             except Booking.DoesNotExist:
-                logger.error(f"❌ Booking not found for reference: {reference}")
-                return JsonResponse({"error": "Booking not found for this reference."}, status=404)
+                # 2. NEW: Try to find as Course Registration via reverse relation
+                try:
+                    payment = Payment.objects.get(transaction_id=reference, course_registration_record__isnull=False)
+                    registration = payment.course_registration_record
+                    
+                    payment.status = 'SUCCESS'
+                    payment.gateway_response = data
+                    payment.save()
+                    
+                    registration.mark_as_paid(payment)
+                    
+                    # Send payment success email to student
+                    send_mail(
+                        subject=f"Payment Successful: {registration.course.title}",
+                        message=f"Hello {registration.full_name},\n\nYour payment of NGN {registration.final_price} for {registration.course.title} was successful. Welcome to PIHUB!",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[registration.email],
+                        fail_silently=True,
+                    )
+                    
+                    return JsonResponse({"message": "Course registration paid successfully."}, status=200)
+                
+                except Payment.DoesNotExist:
+                    logger.error(f"❌ Payment/Registration record not found for reference: {reference}")
+                    return JsonResponse({"error": "Payment record not found for this reference."}, status=404)
 
-        logger.info(f"ℹ️ Event ignored: {event}")
         return JsonResponse({"message": "Event ignored."}, status=200)
 
     except json.JSONDecodeError:
@@ -156,9 +129,7 @@ def paystack_webhook(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-
-
 class PaymentListView(generics.ListAPIView):
-    queryset = Payment.objects.all().select_related('booking').order_by('-created_at')
+    queryset = Payment.objects.all().select_related('booking', 'customer').order_by('-created_at')
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
