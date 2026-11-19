@@ -44,6 +44,7 @@ class StudentViewSet(viewsets.ModelViewSet):
 
 
 class CourseRegistrationView(APIView):
+    authentication_classes = []  # <-- ADDED: Prevents any auth processing
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
@@ -109,7 +110,6 @@ class CourseRegistrationView(APIView):
                 commission_amount=commission_amount
             )
 
-        # Send confirmation email to student
         send_mail(
             subject=f"Registration Received: {course.title}",
             message=f"Hello {full_name},\n\nYour registration for {course.title} has been received. Final Price: NGN {final_price}.\n\nWe will notify you once payment is confirmed.",
@@ -118,7 +118,6 @@ class CourseRegistrationView(APIView):
             fail_silently=True,
         )
 
-        # Notify admin if pay_later
         if payment_option == CourseRegistration.PaymentOption.PAY_LATER:
             send_mail(
                 subject=f"New Pay-Later Registration: {course.title}",
@@ -191,6 +190,7 @@ class CourseRegistrationView(APIView):
 
 class PaymentStatusView(APIView):
     """Public endpoint to check registration payment status by reference."""
+    authentication_classes = []  # <-- ADDED
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
@@ -204,7 +204,6 @@ class PaymentStatusView(APIView):
         except Payment.DoesNotExist:
             return Response({"error": "Registration not found for this reference."}, status=status.HTTP_404_NOT_FOUND)
 
-        # If still pending, verify with Paystack API to avoid webhook timing issues
         if payment.status == 'PENDING':
             url = f"https://api.paystack.co/transaction/verify/{reference}"
             headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
@@ -217,7 +216,7 @@ class PaymentStatusView(APIView):
                     payment.save()
                     registration.mark_as_paid(payment)
             except Exception:
-                pass # Keep as pending if verification fails
+                pass
 
         return Response({
             "reference": reference,
