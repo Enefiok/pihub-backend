@@ -97,7 +97,7 @@ class CourseRegistrationView(APIView):
                     qs = ReferralCode.objects.all()
                     if connection.vendor == 'postgresql':
                         qs = qs.select_for_update()
-                    
+
                     try:
                         referral_code_obj = qs.get(code=referral_code_input)
                     except ReferralCode.DoesNotExist:
@@ -140,14 +140,17 @@ class CourseRegistrationView(APIView):
                     random_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
                     reference = f"CRG{registration.id}{random_str}"
 
-                    Payment.objects.create(
+                    # FIX: create Payment WITHOUT the reverse relation, then link it
+                    # on the registration side (the OneToOneField lives on CourseRegistration).
+                    payment = Payment.objects.create(
                         amount=final_price,
                         currency='NGN',
                         gateway=Payment.Gateway.PAYSTACK,
                         status=Payment.Status.PENDING,
                         transaction_id=reference,
-                        course_registration_record=registration,
                     )
+                    registration.payment = payment
+                    registration.save(update_fields=['payment'])
 
                     callback_url = f"{getattr(settings, 'PAYSTACK_CALLBACK_URL', 'https://pihubng.com/payment-success.html')}?reference={reference}"
                     amount_in_kobo = int(quantize_money(final_price) * 100)
@@ -173,7 +176,7 @@ class CourseRegistrationView(APIView):
                     ps_data = response_data.get('data')
                     if response.status_code != 200 or not response_data.get('status') or not ps_data:
                         raw_msg = response_data.get('message') or f"Payment provider rejected the charge (HTTP {response.status_code})."
-                        
+
                         # Explicitly handle Paystack's ₦100 minimum charge rule
                         if amount_in_kobo < 10000:
                             raw_msg = (
