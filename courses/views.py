@@ -1,9 +1,10 @@
 import random
 import string
+import traceback
 import requests
 from decimal import Decimal
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, connection
 from django.core.mail import send_mail
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
@@ -92,8 +93,13 @@ class CourseRegistrationView(APIView):
                 referral_code_obj = None
 
                 if referral_code_input:
+                    # Safe select_for_update: only works on PostgreSQL, skips on SQLite
+                    qs = ReferralCode.objects.all()
+                    if connection.vendor == 'postgresql':
+                        qs = qs.select_for_update()
+                    
                     try:
-                        referral_code_obj = ReferralCode.objects.select_for_update().get(code=referral_code_input)
+                        referral_code_obj = qs.get(code=referral_code_input)
                     except ReferralCode.DoesNotExist:
                         raise _ApiError(status.HTTP_400_BAD_REQUEST, {"error": "Invalid referral code."})
 
@@ -163,26 +169,35 @@ class CourseRegistrationView(APIView):
                     except ValueError:
                         response_data = {}
 
-                    if response.status_code != 200 or not response_data.get('status'):
-                        raise _ApiError(
-                            status.HTTP_400_BAD_REQUEST,
-                            {
-                                "error": response_data.get('message')
-                                or f"Payment provider could not start the transaction (HTTP {response.status_code}). Please try again or choose 'Pay later'."
-                            },
-                        )
+                    # Safely access 'data' to prevent KeyError if Paystack returns an error payload
+                    ps_data = response_data.get('data')
+                    if response.status_code != 200 or not response_data.get('status') or not ps_data:
+                        raw_msg = response_data.get('message') or f"Payment provider rejected the charge (HTTP {response.status_code})."
+                        
+                        # Explicitly handle Paystack's ₦100 minimum charge rule
+                        if amount_in_kobo < 10000:
+                            raw_msg = (
+                                f"Paystack requires a minimum of ₦100, but the final price is "
+                                f"₦{final_price}. Remove the referral code or pick a course priced at ₦100+."
+                            )
+                        raise _ApiError(status.HTTP_400_BAD_REQUEST, {"error": raw_msg})
 
-                    paystack_data = response_data['data']
+                    paystack_data = ps_data
 
         except _ApiError as e:
             # Transaction rolled back; return the clean JSON error.
             return Response(e.payload, status=e.status_code)
-        except requests.RequestException:
+        except requests.RequestException as e:
             # Network failure talking to Paystack; transaction rolled back.
+            traceback.print_exc()
             return Response(
-                {"error": "We could not reach the payment provider. Please check your connection and try again, or choose 'Pay later'."},
+                {"error": f"Could not reach the payment provider: {e}. Please try again or choose 'Pay later'."},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+        except Exception as e:
+            # Catch-all so the browser NEVER gets an HTML 500 page again.
+            traceback.print_exc()
+            return Response({"error": f"Registration failed: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 
         # ---- transaction committed; safe to send emails ----
         if is_pay_now:
