@@ -15,10 +15,11 @@ from courses.models import Course
 
 
 class CodeGuessingThrottle(AnonRateThrottle):
-    rate = '30/hour'  # Raised from 5/hour for shared networks/retyping
+    rate = '30/hour'
 
 
 class ReferralValidateView(APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_classes = [CodeGuessingThrottle]
 
@@ -85,7 +86,6 @@ class CourseRegistrationAdminViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RegistrationActionView(APIView):
-    """Bulk actions for registrations (Admin only)"""
     permission_classes = [IsManagementOrReadOnly]
 
     def post(self, request):
@@ -93,23 +93,25 @@ class RegistrationActionView(APIView):
         ids = request.data.get('ids', [])
         if not ids:
             return Response({"error": "ids list is required"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        queryset = CourseRegistration.objects.filter(id__in=ids)
-        count = 0
-        if action == 'mark_paid':
-            for reg in queryset.filter(status='pending'):
-                reg.mark_as_paid()
-                count += 1
-        elif action == 'mark_cancelled':
-            count = queryset.update(status='cancelled')
-        else:
+        if action not in ('mark_paid', 'mark_cancelled'):
             return Response({"error": "Invalid action. Use 'mark_paid' or 'mark_cancelled'."}, status=status.HTTP_400_BAD_REQUEST)
-            
-        return Response({"message": f"Successfully updated {count} registrations", "count": count})
+
+        count = 0
+        skipped = []
+        for reg in CourseRegistration.objects.filter(id__in=ids):
+            if reg.status != CourseRegistration.Status.PENDING:
+                skipped.append({"id": reg.id, "reason": f"not pending (status={reg.status})"})
+                continue
+            if action == 'mark_paid':
+                reg.mark_as_paid()
+            else:
+                reg.mark_as_cancelled()
+            count += 1
+
+        return Response({"message": f"Successfully updated {count} registrations", "count": count, "skipped": skipped})
 
 
 class RegistrationStatusUpdateView(APIView):
-    """Single registration status update (Admin only)"""
     permission_classes = [IsManagementOrReadOnly]
 
     def patch(self, request, pk):
@@ -119,14 +121,15 @@ class RegistrationStatusUpdateView(APIView):
             return Response({"error": "Registration not found"}, status=status.HTTP_404_NOT_FOUND)
         
         new_status = request.data.get('status')
-        if new_status not in ['pending', 'paid', 'cancelled']:
-            return Response({"error": "Invalid status. Must be 'pending', 'paid', or 'cancelled'."}, status=status.HTTP_400_BAD_REQUEST)
+        if new_status not in ('paid', 'cancelled'):
+            return Response({"error": "Invalid status. Allowed transitions are pending->paid and pending->cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+        if reg.status != CourseRegistration.Status.PENDING:
+            return Response({"error": f"Cannot transition from {reg.status} to {new_status}. Only pending registrations can change."}, status=status.HTTP_400_BAD_REQUEST)
         
-        if new_status == 'paid' and reg.status == 'pending':
+        if new_status == 'paid':
             reg.mark_as_paid()
         else:
-            reg.status = new_status
-            reg.save()
+            reg.mark_as_cancelled()
             
         return Response({"status": reg.status, "message": "Status updated successfully"})
 
@@ -137,7 +140,7 @@ class ReferralAnalyticsView(APIView):
     def get(self, request):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
-        group_by = request.query_params.get('group_by', 'day') # day, week, month
+        group_by = request.query_params.get('group_by', 'day')
         
         queryset = CourseRegistration.objects.all()
         if start_date:
@@ -156,7 +159,6 @@ class ReferralAnalyticsView(APIView):
         
         conversion_rate = (paid_regs / total_regs * 100) if total_regs > 0 else 0
 
-        # Time Series
         trunc_map = {'day': TruncDay, 'week': TruncWeek, 'month': TruncMonth}
         trunc_func = trunc_map.get(group_by, TruncDay)
         time_series = queryset.annotate(date=trunc_func('created_at')).values('date').annotate(
@@ -165,8 +167,9 @@ class ReferralAnalyticsView(APIView):
             revenue=Sum('final_price', filter=Q(status='paid'))
         ).order_by('date')
 
-        # By Influencer
-        by_influencer = queryset.values('referral_code__influencer__name').annotate(
+        by_influencer_raw = queryset.values(
+            'referral_code__influencer__id', 'referral_code__influencer__name'
+        ).annotate(
             registrations=Count('id'),
             paid_count=Count('id', filter=Q(status='paid')),
             revenue=Sum('final_price', filter=Q(status='paid')),
@@ -174,22 +177,55 @@ class ReferralAnalyticsView(APIView):
             commission_owed=Sum('commission_amount', filter=Q(status='paid'))
         ).exclude(referral_code__isnull=True).order_by('-paid_count')
         
-        for item in by_influencer:
-            item['conversion_rate_percent'] = round((item['paid_count'] / item['registrations'] * 100), 2) if item['registrations'] > 0 else 0
+        by_influencer = []
+        for i in by_influencer_raw:
+            reg = i['registrations']
+            by_influencer.append({
+                "referral_code__influencer__name": i['referral_code__influencer__name'],
+                "influencer_id": i['referral_code__influencer__id'],
+                "influencer_name": i['referral_code__influencer__name'],
+                "registrations": reg,
+                "paid_count": i['paid_count'],
+                "paid": i['paid_count'],
+                "revenue": str(i['revenue'] or 0),
+                "discount_given": str(i['discount_given'] or 0),
+                "commission_owed": str(i['commission_owed'] or 0),
+                "conversion_rate_percent": round((i['paid_count'] / reg * 100), 2) if reg else 0,
+            })
 
-        # By Code
-        by_code = queryset.values('referral_code__code').annotate(
+        by_code_raw = queryset.values('referral_code__code').annotate(
             registrations=Count('id'),
             paid_count=Count('id', filter=Q(status='paid')),
             revenue=Sum('final_price', filter=Q(status='paid')),
             commission_owed=Sum('commission_amount', filter=Q(status='paid'))
         ).exclude(referral_code__isnull=True).order_by('-paid_count')
+        
+        by_code = []
+        for c in by_code_raw:
+            by_code.append({
+                "referral_code__code": c['referral_code__code'],
+                "code": c['referral_code__code'],
+                "registrations": c['registrations'],
+                "paid_count": c['paid_count'],
+                "paid": c['paid_count'],
+                "revenue": str(c['revenue'] or 0),
+                "commission_owed": str(c['commission_owed'] or 0),
+            })
 
-        # Top Courses
-        top_courses = queryset.values('course__title').annotate(
+        top_courses_raw = queryset.values('course__title').annotate(
             registrations=Count('id'),
             paid_count=Count('id', filter=Q(status='paid'))
         ).order_by('-paid_count')[:5]
+        
+        top_courses = []
+        for t in top_courses_raw:
+            top_courses.append({
+                "course__title": t['course__title'],
+                "course_title": t['course__title'],
+                "registrations": t['registrations'],
+                "paid_count": t['paid_count'],
+                "paid": t['paid_count'],
+            })
 
         return Response({
             "summary": {
@@ -204,7 +240,7 @@ class ReferralAnalyticsView(APIView):
             },
             "status_counts": {"paid": paid_regs, "pending": pending_regs, "cancelled": cancelled_regs},
             "time_series": list(time_series),
-            "by_influencer": list(by_influencer),
-            "by_code": list(by_code),
-            "top_courses": list(top_courses)
+            "by_influencer": by_influencer,
+            "by_code": by_code,
+            "top_courses": top_courses
         })

@@ -7,7 +7,6 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.core.mail import send_mail
 from .models import Payment
 from workspaces.models import Booking
 from referrals.models import CourseRegistration
@@ -79,7 +78,6 @@ def paystack_webhook(request):
             reference = data.get('reference')
             amount = data.get('amount', 0) / 100
             
-            # 1. Try to find as Booking (Workspace flow)
             try:
                 booking = Booking.objects.get(reference=reference)
                 payment, created = Payment.objects.get_or_create(
@@ -94,7 +92,6 @@ def paystack_webhook(request):
                 return JsonResponse({"message": "Booking activated successfully."}, status=200)
                     
             except Booking.DoesNotExist:
-                # 2. NEW: Try to find as Course Registration via reverse relation
                 try:
                     payment = Payment.objects.get(transaction_id=reference, course_registration_record__isnull=False)
                     registration = payment.course_registration_record
@@ -103,16 +100,8 @@ def paystack_webhook(request):
                     payment.gateway_response = data
                     payment.save()
                     
+                    # This now handles Student creation, status update, and sending the email
                     registration.mark_as_paid(payment)
-                    
-                    # Send payment success email to student
-                    send_mail(
-                        subject=f"Payment Successful: {registration.course.title}",
-                        message=f"Hello {registration.full_name},\n\nYour payment of NGN {registration.final_price} for {registration.course.title} was successful. Welcome to PIHUB!",
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[registration.email],
-                        fail_silently=True,
-                    )
                     
                     return JsonResponse({"message": "Course registration paid successfully."}, status=200)
                 

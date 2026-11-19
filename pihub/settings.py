@@ -187,5 +187,8 @@ PAYSTACK_SECRET_KEY = config('PAYSTACK_SECRET_KEY', default='')
 PAYSTACK_PUBLIC_KEY = config('PAYSTACK_PUBLIC_KEY', default='')
 PAYSTACK_CALLBACK_URL = config('PAYSTACK_CALLBACK_URL', default='https://pihubng.com/payment-success.html')
 
+# Commission Calculation Base ("final" = discounted price the student pays, "original" = list price)
+COMMISSION_ON = config('COMMISSION_ON', default='final')
+
 # Admin Notification Email
 ADMIN_NOTIFICATION_EMAIL = config('ADMIN_NOTIFICATION_EMAIL', default='admin@pihubng.com')
